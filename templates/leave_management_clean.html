@@ -1,0 +1,174 @@
+{% extends "base_clean.html" %}
+
+{% block title %}Leave Management - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header flex justify-between items-center">
+        <div>
+            <h1 class="page-title">Leave Management</h1>
+            <p class="page-subtitle">Manage student leave requests</p>
+        </div>
+        <button class="btn btn-primary" onclick="openRequestModal()">
+            <i class="fas fa-plus"></i>
+            New Request
+        </button>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid slide-up">
+        <div class="stat-card">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value">{{ pending_count if pending_count is defined else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Approved</div>
+            <div class="stat-value">{{ approved_count if approved_count is defined else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Rejected</div>
+            <div class="stat-value">{{ rejected_count if rejected_count is defined else 0 }}</div>
+        </div>
+    </div>
+    
+    <!-- Leave Requests Table -->
+    <div class="card slide-up">
+        <div class="card-header">
+            <h3 class="card-title">Leave Requests</h3>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if leave_requests %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Leave Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request in leave_requests %}
+                        <tr>
+                            <td><strong>{{ request.student.name }}</strong></td>
+                            <td>{{ request.leave_type }}</td>
+                            <td>{{ request.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ request.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ request.reason[:30] }}{{ '...' if request.reason|length > 30 else '' }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'warning' if request.status == 'Pending' else ('success' if request.status == 'Approved' else 'danger') }}">
+                                    {{ request.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if request.status == 'Pending' %}
+                                <div class="flex gap-2">
+                                    <form method="POST" action="{{ url_for('leave.review') }}" style="display: inline;">
+                                        <input type="hidden" name="leave_id" value="{{ request.id }}">
+                                        <input type="hidden" name="action" value="approve">
+                                        <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--success);" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('leave.review') }}" style="display: inline;">
+                                        <input type="hidden" name="leave_id" value="{{ request.id }}">
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--danger);" title="Reject">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-calendar-minus"></i>
+                </div>
+                <div class="empty-state-title">No leave requests</div>
+                <div class="empty-state-text">Leave requests will appear here when submitted.</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- New Request Modal -->
+<div class="modal-overlay" id="request-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">New Leave Request</h3>
+            <button class="modal-close" onclick="closeRequestModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ url_for('leave.apply') }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Student</label>
+                    <select name="student_id" class="form-input" required>
+                        <option value="">Select student</option>
+                        {% for student in students %}
+                        <option value="{{ student.id }}">{{ student.name }} ({{ student.student_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Leave Type</label>
+                    <select name="leave_type" class="form-input" required>
+                        <option value="Sick">Sick Leave</option>
+                        <option value="Personal">Personal Leave</option>
+                        <option value="Emergency">Emergency Leave</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reason</label>
+                    <textarea name="reason" class="form-input" rows="3" required placeholder="Describe the reason for leave..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeRequestModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openRequestModal() {
+        document.getElementById('request-modal').classList.add('active');
+    }
+    
+    function closeRequestModal() {
+        document.getElementById('request-modal').classList.remove('active');
+    }
+    
+    document.getElementById('request-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeRequestModal();
+    });
+</script>
+{% endblock %}

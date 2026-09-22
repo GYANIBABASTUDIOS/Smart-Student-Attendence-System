@@ -1,0 +1,190 @@
+{% extends "base_clean.html" %}
+
+{% block title %}Dashboard - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section with Grid Background -->
+    <div class="hero">
+        <!-- Grid Background -->
+        <div class="hero-grid"></div>
+        
+        <!-- Animated Dots -->
+        <div class="hero-dots" id="hero-dots"></div>
+        
+        <!-- Content -->
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-bolt"></i>
+                AI-Powered Face Recognition
+            </div>
+            
+            <h1 class="hero-title">
+                Smart <span class="hero-title-blue">Attendance</span> System
+            </h1>
+            
+            <p class="hero-subtitle">
+                Transform your attendance tracking with cutting-edge AI face recognition. 
+                Fast, accurate, and completely effortless.
+            </p>
+            
+            <div class="hero-actions">
+                <a href="{{ url_for('attendance.mark_page') }}" class="btn btn-primary btn-xl">
+                    <i class="fas fa-camera"></i>
+                    Mark Attendance
+                </a>
+                <a href="{{ url_for('students.register') }}" class="btn btn-secondary btn-xl">
+                    <i class="fas fa-user-plus"></i>
+                    Add Student
+                </a>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{{ total_students }}</div>
+                    <div class="hero-stat-label">Total Students</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{{ today_attendance }}</div>
+                    <div class="hero-stat-label">Present Today</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">{% if total_students > 0 %}{{ ((today_attendance / total_students) * 100)|round(0)|int }}%{% else %}0%{% endif %}</div>
+                    <div class="hero-stat-label">Attendance Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Progress -->
+    {% if total_students > 0 %}
+    <div class="card slide-up mb-6">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-medium">Today's Progress</span>
+                <span class="badge badge-{{ 'success' if (today_attendance / total_students * 100) >= 75 else ('warning' if (today_attendance / total_students * 100) >= 50 else 'danger') }}">
+                    {{ ((today_attendance / total_students) * 100)|round(1) }}% Complete
+                </span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar primary" style="width: {{ (today_attendance / total_students * 100) }}%;"></div>
+            </div>
+            <div class="flex justify-between mt-2" style="font-size: 12px; color: var(--text-muted);">
+                <span><i class="fas fa-check-circle text-success"></i> {{ today_attendance }} marked</span>
+                <span><i class="fas fa-clock text-warning"></i> {{ total_students - today_attendance }} remaining</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Feature Cards -->
+    <div class="feature-grid">
+        <a href="{{ url_for('attendance.mark_page') }}" class="feature-card slide-up stagger-1">
+            <div class="feature-icon"><i class="fas fa-camera"></i></div>
+            <div class="feature-title">Face Recognition</div>
+            <div class="feature-desc">Mark attendance instantly using AI-powered face detection technology</div>
+        </a>
+        
+        <a href="{{ url_for('students.list_students') }}" class="feature-card slide-up stagger-2">
+            <div class="feature-icon"><i class="fas fa-users"></i></div>
+            <div class="feature-title">Manage Students</div>
+            <div class="feature-desc">View, add, edit and manage all student records in one place</div>
+        </a>
+        
+        <a href="{{ url_for('attendance.list_attendance') }}" class="feature-card slide-up stagger-3">
+            <div class="feature-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="feature-title">Attendance Records</div>
+            <div class="feature-desc">View complete attendance history with filters and export options</div>
+        </a>
+        
+        <a href="{{ url_for('leave.index') }}" class="feature-card slide-up stagger-4">
+            <div class="feature-icon"><i class="fas fa-calendar-minus"></i></div>
+            <div class="feature-title">Leave Management</div>
+            <div class="feature-desc">Handle student leave requests with approval workflow</div>
+        </a>
+        
+        <a href="{{ url_for('attendance.reports') }}" class="feature-card slide-up stagger-5">
+            <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
+            <div class="feature-title">Reports & Analytics</div>
+            <div class="feature-desc">Generate detailed reports and visualize attendance trends</div>
+        </a>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card mt-8 slide-up">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history text-primary" style="margin-right: 8px;"></i>Recent Activity</h3>
+            <a href="{{ url_for('attendance.list_attendance') }}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        {% if recent_records and recent_records|length > 0 %}
+        <div class="card-body">
+            <ul class="activity-list">
+                {% for record in recent_records[:5] %}
+                <li class="activity-item">
+                    <div class="activity-icon {{ 'success' if record.status == 'Present' else ('warning' if record.status == 'Late' else 'danger') }}">
+                        <i class="fas fa-{{ 'check' if record.status == 'Present' else ('clock' if record.status == 'Late' else 'times') }}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">{{ record.student.name }}</div>
+                        <div class="activity-meta">
+                            {{ record.student.student_id }} 
+                            {% if record.student.department %}&bull; {{ record.student.department }}{% endif %}
+                            &bull; {{ record.time_in.strftime('%H:%M') if record.time_in else 'N/A' }}
+                        </div>
+                    </div>
+                    <span class="badge badge-{{ 'success' if record.status == 'Present' else ('warning' if record.status == 'Late' else 'danger') }}">
+                        {{ record.status }}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="card-body">
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="empty-state-title">No recent activity</div>
+                <div class="empty-state-text">Start marking attendance to see activity here.</div>
+                <a href="{{ url_for('attendance.mark_page') }}" class="btn btn-primary"><i class="fas fa-camera"></i> Mark Attendance</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Create animated dots on grid intersections
+(function() {
+    const container = document.getElementById('hero-dots');
+    if (!container) return;
+    
+    const gridSize = 60;
+    const containerRect = container.getBoundingClientRect();
+    const cols = Math.floor(containerRect.width / gridSize);
+    const rows = Math.floor(containerRect.height / gridSize);
+    
+    // Create dots at random grid intersections
+    for (let i = 0; i < 15; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'hero-dot';
+        dot.style.left = (Math.floor(Math.random() * cols) * gridSize) + 'px';
+        dot.style.top = (Math.floor(Math.random() * rows) * gridSize) + 'px';
+        dot.style.animationDelay = (Math.random() * 4) + 's';
+        container.appendChild(dot);
+    }
+    
+    // Periodically move dots to new positions
+    setInterval(function() {
+        const dots = container.querySelectorAll('.hero-dot');
+        dots.forEach(function(dot) {
+            if (Math.random() > 0.7) {
+                dot.style.left = (Math.floor(Math.random() * cols) * gridSize) + 'px';
+                dot.style.top = (Math.floor(Math.random() * rows) * gridSize) + 'px';
+            }
+        });
+    }, 4000);
+})();
+</script>
+{% endblock %}

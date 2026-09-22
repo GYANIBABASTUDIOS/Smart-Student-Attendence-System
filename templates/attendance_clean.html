@@ -1,0 +1,239 @@
+{% extends "base_clean.html" %}
+
+{% block title %}Attendance Records - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Creative Page Header -->
+    <div class="page-header-creative">
+        <div class="page-header-icon">
+            <i class="fas fa-clipboard-list"></i>
+        </div>
+        <h1 class="page-title"><span class="page-title-blue">Attendance</span> Records</h1>
+        <p class="page-subtitle">View and manage all attendance history</p>
+        <div class="mt-4 flex gap-2 justify-center">
+            <a href="{{ url_for('attendance.export') }}?format=csv" class="btn btn-secondary">
+                <i class="fas fa-download"></i> Export CSV
+            </a>
+            <a href="{{ url_for('attendance.mark_page') }}" class="btn btn-primary">
+                <i class="fas fa-camera"></i> Mark Attendance
+            </a>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="stats-grid slide-up">
+        <div class="stat-card">
+            <div class="stat-label">Total Records</div>
+            <div class="stat-value">{{ pagination.total if pagination else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Showing</div>
+            <div class="stat-value">{{ records|length if records else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Present</div>
+            <div class="stat-value text-success">{{ records|selectattr('status', 'equalto', 'Present')|list|length if records else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Page</div>
+            <div class="stat-value">{{ pagination.page if pagination else 1 }} of {{ pagination.pages if pagination else 1 }}</div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4 slide-up">
+        <div class="card-body">
+            <form method="GET" class="flex gap-3 flex-wrap items-center">
+                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                    <label class="form-label" style="font-size: 12px;">Search</label>
+                    <input type="text" name="search" class="form-input" placeholder="Search by student name or ID..." 
+                           value="{{ current_search or '' }}">
+                </div>
+                <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
+                    <label class="form-label" style="font-size: 12px;">Date</label>
+                    <input type="date" name="date" class="form-input" value="{{ current_date or '' }}">
+                </div>
+                <div class="form-group" style="margin-bottom: 0; min-width: 130px;">
+                    <label class="form-label" style="font-size: 12px;">Status</label>
+                    <select name="status" class="form-input">
+                        <option value="">All</option>
+                        {% for status in statuses %}
+                        <option value="{{ status }}" {{ 'selected' if status == current_status else '' }}>{{ status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if departments and departments|length > 0 %}
+                <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
+                    <label class="form-label" style="font-size: 12px;">Department</label>
+                    <select name="department" class="form-input">
+                        <option value="">All</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {{ 'selected' if dept == current_department else '' }}>{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                {% if years and years|length > 0 %}
+                <div class="form-group" style="margin-bottom: 0; min-width: 120px;">
+                    <label class="form-label" style="font-size: 12px;">Year</label>
+                    <select name="year" class="form-input">
+                        <option value="">All</option>
+                        {% for year in years %}
+                        <option value="{{ year }}" {{ 'selected' if year == current_year else '' }}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="form-group" style="margin-bottom: 0; min-width: 120px;">
+                    <label class="form-label" style="font-size: 12px;">Per Page</label>
+                    <select name="per_page" class="form-input">
+                        <option value="50" {{ 'selected' if per_page == 50 else '' }}>50</option>
+                        <option value="100" {{ 'selected' if per_page == 100 else '' }}>100</option>
+                        <option value="200" {{ 'selected' if per_page == 200 else '' }}>200</option>
+                    </select>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+                    {% if current_search or current_status or current_department or current_year %}
+                    <a href="{{ url_for('attendance.list_attendance') }}" class="btn btn-ghost">Clear</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="card slide-up">
+        <div class="card-header">
+            <h3 class="card-title">Attendance Log</h3>
+            <span class="badge badge-neutral">{{ records|length if records else 0 }} records</span>
+        </div>
+        {% if records and records|length > 0 %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>ID</th>
+                        <th>Department</th>
+                        <th>Date</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600;">
+                                    {{ record.student.name[0]|upper }}
+                                </div>
+                                <span class="font-medium">{{ record.student.name }}</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">{{ record.student.student_id }}</td>
+                        <td>{{ record.student.department or '-' }}</td>
+                        <td>{{ record.date.strftime('%b %d, %Y') if record.date else '-' }}</td>
+                        <td>
+                            {% if record.time_in %}
+                            <span class="flex items-center gap-1 text-success">
+                                <i class="fas fa-sign-in-alt" style="font-size: 10px;"></i>
+                                {{ record.time_in.strftime('%H:%M') }}
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            {% if record.time_out %}
+                            <span class="flex items-center gap-1 text-muted">
+                                <i class="fas fa-sign-out-alt" style="font-size: 10px;"></i>
+                                {{ record.time_out.strftime('%H:%M') }}
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if record.status == 'Present' else ('warning' if record.status == 'Late' else 'danger') }}">
+                                <i class="fas fa-{{ 'check' if record.status == 'Present' else ('clock' if record.status == 'Late' else 'times') }}" style="font-size: 9px;"></i>
+                                {{ record.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+        <div class="card-footer">
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Showing {{ ((pagination.page - 1) * pagination.per_page + 1) }} to 
+                    {{ (pagination.page * pagination.per_page) if pagination.page < pagination.pages else pagination.total }} 
+                    of {{ pagination.total }} records
+                </div>
+                <div class="pagination">
+                    {% if pagination.has_prev %}
+                    <a href="{{ url_for('attendance.list_attendance', page=pagination.prev_num, search=current_search, date=current_date, department=current_department, year=current_year, status=current_status, per_page=per_page) }}" 
+                       class="pagination-btn">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% else %}
+                    <span class="pagination-btn disabled">
+                        <i class="fas fa-chevron-left"></i>
+                    </span>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != pagination.page %}
+                            <a href="{{ url_for('attendance.list_attendance', page=page_num, search=current_search, date=current_date, department=current_department, year=current_year, status=current_status, per_page=per_page) }}" 
+                               class="pagination-btn">{{ page_num }}</a>
+                            {% else %}
+                            <span class="pagination-btn active">{{ page_num }}</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="pagination-btn disabled">…</span>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                    <a href="{{ url_for('attendance.list_attendance', page=pagination.next_num, search=current_search, date=current_date, department=current_department, year=current_year, status=current_status, per_page=per_page) }}" 
+                       class="pagination-btn">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% else %}
+                    <span class="pagination-btn disabled">
+                        <i class="fas fa-chevron-right"></i>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="card-body">
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="empty-state-title">No records found</div>
+                <div class="empty-state-text">
+                    {% if current_date or request.args.get('status') %}
+                    No records match your filters.
+                    {% else %}
+                    Start marking attendance to see records.
+                    {% endif %}
+                </div>
+                {% if not current_date %}
+                <a href="{{ url_for('attendance.mark_page') }}" class="btn btn-primary"><i class="fas fa-camera"></i> Mark Attendance</a>
+                {% else %}
+                <a href="{{ url_for('attendance.list_attendance') }}" class="btn btn-secondary"><i class="fas fa-times"></i> Clear Filters</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+tests/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.tmp/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Enrolment data and generated output -- mounted as volumes at runtime, never baked in
+face_data/
+student_images/
+exports/
+
+# Logs
+*.log
+logs/
+
+# Database (use volumes instead)
+*.db
+instance/
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github/
+
+# NOTE: models/ is deliberately *not* ignored.  The DNN detector needs
+# models/deploy.prototxt and models/res10_300x300_ssd_iter_140000.caffemodel at
+# runtime; without them the detector silently falls back to a Haar cascade.
+
+# Misc
+.DS_Store
+Thumbs.db

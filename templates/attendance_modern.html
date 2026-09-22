@@ -1,0 +1,139 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Attendance Records - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="top-header">
+    <div>
+        <h1 class="page-title">Attendance Records</h1>
+        <p class="page-subtitle">View and manage attendance history</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('attendance.export') }}?format=csv" class="btn btn-secondary">
+            <i class="fas fa-download"></i> Export CSV
+        </a>
+        <a href="{{ url_for('attendance.mark_page') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Mark Attendance
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body">
+        <form method="GET" style="display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 150px;">
+                <label class="form-label">Date</label>
+                <input type="date" name="date" class="form-control" value="{{ current_date }}">
+            </div>
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 150px;">
+                <label class="form-label">Department</label>
+                <select name="department" class="form-control form-select">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {% if current_department == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 150px;">
+                <label class="form-label">Year</label>
+                <select name="year" class="form-control form-select">
+                    <option value="">All Years</option>
+                    {% for yr in years %}
+                    <option value="{{ yr }}" {% if current_year == yr %}selected{% endif %}>{{ yr }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Records Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Records for {{ current_date }}</h3>
+        <span class="badge badge-primary">{{ records|length }} records</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if records %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Department</th>
+                        <th>Time In</th>
+                        <th>Status</th>
+                        <th>Confidence</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="avatar avatar-initials avatar-sm">{{ record.student.name[0] if record.student else '?' }}</div>
+                                <span style="font-weight: 500;">{{ record.student.name if record.student else 'Unknown' }}</span>
+                            </div>
+                        </td>
+                        <td><code>{{ record.student.student_id if record.student else 'N/A' }}</code></td>
+                        <td>{{ record.student.department if record.student else 'N/A' }}</td>
+                        <td>{{ record.time_in.strftime('%H:%M:%S') if record.time_in else 'N/A' }}</td>
+                        <td>
+                            {% if record.status == 'Present' %}
+                            <span class="badge badge-success">Present</span>
+                            {% elif record.status == 'Late' %}
+                            <span class="badge badge-warning">Late</span>
+                            {% elif record.status == 'On Leave' %}
+                            <span class="badge badge-info">On Leave</span>
+                            {% else %}
+                            <span class="badge badge-danger">{{ record.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.confidence_score %}
+                            <div class="progress" style="width: 80px; height: 6px;">
+                                <div class="progress-bar success" style="width: {{ (record.confidence_score * 100)|int }}%"></div>
+                            </div>
+                            <small>{{ (record.confidence_score * 100)|round(1) }}%</small>
+                            {% else %}
+                            <span class="badge badge-secondary">Manual</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteRecord({{ record.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="empty-state-title">No records found</div>
+            <div class="empty-state-text">No attendance records for the selected filters.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteRecord(id) {
+    if (confirm('Delete this attendance record?')) {
+        fetch(`/delete_attendance/${id}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => { if (data.success) location.reload(); else alert(data.message); });
+    }
+}
+</script>
+{% endblock %}

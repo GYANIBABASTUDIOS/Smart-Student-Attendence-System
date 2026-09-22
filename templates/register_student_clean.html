@@ -1,0 +1,186 @@
+{% extends "base_clean.html" %}
+
+{% block title %}Register Student - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container container-sm">
+    <!-- Creative Page Header -->
+    <div class="page-header-creative">
+        <div class="page-header-icon">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <h1 class="page-title">Register <span class="page-title-blue">Student</span></h1>
+        <p class="page-subtitle">Add a new student to the attendance system</p>
+    </div>
+    
+    <div class="card slide-up">
+        <div class="card-header">
+            <h3 class="card-title">Student Information</h3>
+            <span class="badge badge-neutral">* Required</span>
+        </div>
+        <div class="card-body">
+           <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Basic Info -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Student ID *</label>
+                        <input type="text" name="student_id" class="form-input" required placeholder="e.g., STU001" value="{{ data.student_id if data else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" name="name" class="form-input" required placeholder="Enter full name" value="{{ data.name if data else '' }}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" name="email" class="form-input" required placeholder="student@example.com" value="{{ data.email if data else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" name="phone" class="form-input" placeholder="Phone number" value="{{ data.phone if data else '' }}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Department *</label>
+                        <select name="department" class="form-input" required>
+                            <option value="">Select department</option>
+                            <option value="Computer Science">Computer Science</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Business">Business</option>
+                            <option value="Arts">Arts</option>
+                            <option value="Science">Science</option>
+                            <option value="Medicine">Medicine</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Year *</label>
+                        <select name="year" class="form-input" required>
+                            <option value="">Select year</option>
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Section</label>
+                    <input type="text" name="section" class="form-input" placeholder="e.g., A, B, C" value="{{ data.section if data else '' }}">
+                </div>
+                
+                <!-- Face Image -->
+                <div class="form-group">
+                    <label class="form-label">Face Image * <span class="text-muted" style="font-weight: 400;">(for recognition)</span></label>
+                    <div class="file-upload" onclick="document.getElementById('face-image').click()">
+                        <input type="file" id="face-image" name="image" accept="image/*" style="display: none;" onchange="previewImage(this)" required>
+                        <div id="upload-placeholder">
+                            <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                            <div class="file-upload-text">Click to upload photo</div>
+                            <div class="file-upload-hint">PNG, JPG up to 5MB</div>
+                        </div>
+                        <div id="preview-container" style="display: none;">
+                            <img id="image-preview" style="max-width: 180px; border-radius: var(--radius); margin-bottom: 8px;">
+                            <div class="text-muted" style="font-size: 12px;">Click to change</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Camera Option -->
+                <div class="form-group">
+                    <label class="form-label">Or Capture from Camera</label>
+                    <div style="background: var(--bg-secondary); border-radius: var(--radius); padding: 16px;">
+                        <div class="camera-container" style="max-width: 280px; margin: 0 auto; border-radius: var(--radius-lg);">
+                            <video id="video" autoplay playsinline style="width: 100%; border-radius: var(--radius); display: none;"></video>
+                            <div class="camera-placeholder" id="camera-placeholder" style="height: 180px;">
+                                <i class="fas fa-video" style="font-size: 28px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                <span style="font-size: 12px;">Camera off</span>
+                            </div>
+                        </div>
+                        <canvas id="canvas" style="display: none;"></canvas>
+                        <div class="flex gap-2 mt-3 justify-center">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="startCamera()" id="start-camera-btn"><i class="fas fa-video"></i> Start</button>
+                            <button type="button" id="capture-btn" class="btn btn-primary btn-sm hidden" onclick="capturePhoto()"><i class="fas fa-camera"></i> Capture</button>
+                            <button type="button" id="stop-camera-btn" class="btn btn-ghost btn-sm hidden" onclick="stopCamera()"><i class="fas fa-stop"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="captured_image" id="captured-image">
+                
+                <div class="flex gap-2 mt-6">
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-user-plus"></i> Register Student</button>
+                    <a href="{{ url_for('students.list_students') }}" class="btn btn-secondary btn-lg">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tips -->
+    <div class="card mt-4 slide-up">
+        <div class="card-body">
+            <div class="flex gap-3 items-center">
+                <div class="activity-icon primary"><i class="fas fa-lightbulb"></i></div>
+                <div>
+                    <div class="font-medium">Photo Tips</div>
+                    <div class="text-muted" style="font-size: 13px;">Use a clear, front-facing photo with good lighting for best recognition accuracy.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let video = document.getElementById('video'), canvas = document.getElementById('canvas'), stream = null;
+
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('image-preview').src = e.target.result;
+            document.getElementById('preview-container').style.display = 'block';
+            document.getElementById('upload-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: 280, height: 210 } });
+        video.srcObject = stream; video.style.display = 'block';
+        document.getElementById('camera-placeholder').style.display = 'none';
+        document.getElementById('start-camera-btn').classList.add('hidden');
+        document.getElementById('capture-btn').classList.remove('hidden');
+        document.getElementById('stop-camera-btn').classList.remove('hidden');
+    } catch (err) { alert('Camera error: ' + err.message); }
+}
+
+function stopCamera() {
+    if (stream) { stream.getTracks().forEach(track => track.stop()); video.srcObject = null; video.style.display = 'none'; }
+    document.getElementById('camera-placeholder').style.display = 'flex';
+    document.getElementById('start-camera-btn').classList.remove('hidden');
+    document.getElementById('capture-btn').classList.add('hidden');
+    document.getElementById('stop-camera-btn').classList.add('hidden');
+}
+
+function capturePhoto() {
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const imageData = canvas.toDataURL('image/jpeg');
+    document.getElementById('captured-image').value = imageData;
+    document.getElementById('image-preview').src = imageData;
+    document.getElementById('preview-container').style.display = 'block';
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('face-image').removeAttribute('required');
+    stopCamera();
+}
+</script>
+{% endblock %}
