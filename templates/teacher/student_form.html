@@ -1,0 +1,33 @@
+{% extends "teacher/base_teacher.html" %}
+
+{% block title %}{{ heading }} · Teacher Panel{% endblock %}
+{% block page_heading %}{{ heading }}{% endblock %}
+{% block content %}
+<section class="panel-welcome" aria-label="Student form introduction">
+    <div><p class="panel-eyebrow"><a href="{{ url_for('teacher.students') }}">MY STUDENTS</a></p><h2>{{ heading }}</h2><p>Student records can only be assigned to one of your active class sections.</p></div>
+    <a class="panel-button" href="{{ url_for('teacher.students') }}"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to students</a>
+</section>
+
+<form method="post" class="panel-panel teacher-student-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors %}<div class="teacher-student-errors" role="alert"><strong>Please correct the following:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+    {% if not classes %}
+    <div class="teacher-dashboard-empty"><span class="metric-icon blue"><i class="fa-solid fa-link-slash" aria-hidden="true"></i></span><h3>No active class assignments</h3><p>Ask an administrator to assign an active class section before registering or editing students.</p></div>
+    {% else %}
+    <div class="teacher-student-form-grid">
+        <div class="teacher-student-field"><label for="student_id">Student identifier <span aria-hidden="true">*</span></label><input id="student_id" name="student_id" type="text" maxlength="20" required value="{{ values.get('student_id', '') }}" {% if student %}readonly aria-describedby="student-id-help"{% endif %}><small id="student-id-help">{% if student %}The existing student identifier cannot be changed.{% else %}Use 3–20 letters, numbers, dots, dashes, slashes, or underscores.{% endif %}</small></div>
+        <div class="teacher-student-field"><label for="name">Full name <span aria-hidden="true">*</span></label><input id="name" name="name" type="text" maxlength="100" required value="{{ values.get('name', '') }}"></div>
+        <div class="teacher-student-field"><label for="email">Email <span aria-hidden="true">*</span></label><input id="email" name="email" type="email" maxlength="120" required value="{{ values.get('email', '') }}"></div>
+        {% if not student %}
+        <div class="teacher-student-field"><label for="username">Login username <span aria-hidden="true">*</span></label><input id="username" name="username" type="text" maxlength="64" autocomplete="username" required value="{{ values.get('username', '') }}"></div>
+        <div class="teacher-student-field"><label for="password">Password <span aria-hidden="true">*</span></label><input id="password" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Use at least 12 characters.</small></div>
+        <div class="teacher-student-field"><label for="password_confirmation">Confirm password <span aria-hidden="true">*</span></label><input id="password_confirmation" name="password_confirmation" type="password" minlength="12" autocomplete="new-password" required></div>
+        {% endif %}
+        <div class="teacher-student-field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" maxlength="15" value="{{ values.get('phone', '') }}"></div>
+        <div class="teacher-student-field wide"><label for="class_section_id">Assigned class / section <span aria-hidden="true">*</span></label><select id="class_section_id" name="class_section_id" required><option value="">Choose an assigned class</option>{% for class_section in classes %}<option value="{{ class_section.id }}" {% if values.get('class_section_id', '')|string == class_section.id|string %}selected{% endif %}>{{ class_section.department.name }} · {{ class_section.name }} · Year {{ class_section.year }} / Section {{ class_section.section }}</option>{% endfor %}</select><small>Department, year, and section values are taken from this class to keep existing student fields consistent.</small></div>
+    </div>
+    <p class="teacher-student-form-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {% if student %}Editing does not change the student's login credentials, upload a photo, enroll a face, or change face samples.{% else %}A student login will be created using this username and email. The password is stored as a secure hash. Face enrollment remains a separate workflow.{% endif %}</p>
+    <footer class="teacher-student-form-actions"><a class="panel-button" href="{{ url_for('teacher.students') }}">Cancel</a><button class="panel-button primary" type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ 'Save student' if student else 'Register student' }}</button></footer>
+    {% endif %}
+</form>
+{% endblock %}

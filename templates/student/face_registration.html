@@ -1,0 +1,83 @@
+{% extends "student/base_student.html" %}
+{% block title %}Face Registration · Student Panel{% endblock %}
+{% block page_heading %}Face Registration{% endblock %}
+{% block content %}
+<section class="panel-welcome"><div><p class="panel-eyebrow">YOUR PROFILE</p><h2>Register My Face</h2><p>This adds a face sample to the attendance recognition system used by your assigned teachers.</p></div><a class="panel-button" href="{{ url_for('student.profile') }}">Back to profile</a></section>
+<section class="panel-panel">
+    {% if errors %}<div class="teacher-student-errors" role="alert"><strong>Registration could not be completed:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+    {% if enrolled %}
+    <div class="teacher-dashboard-empty"><span class="metric-icon green"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span><h3>Face registration is active</h3><p>Your existing face sample and recognition label are in place. This page will not replace existing samples.</p></div>
+    {% else %}
+    <div class="panel-panel-heading"><div><h2>Before you continue</h2><p>Camera access is requested only after you choose Start camera. You can also select a photo file.</p></div></div>
+    <div class="teacher-dashboard-empty"><p>The captured image is validated and used to create a normalized face sample stored on the system filesystem. The LBPH model and label map are rebuilt from stored samples. The temporary upload is removed after processing. Only authorized attendance workflows use the recognition result.</p></div>
+    <form method="post" enctype="multipart/form-data" class="student-profile-form" id="face-registration-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="captured_image" id="captured-image">
+        <label class="student-face-consent"><input type="checkbox" name="consent" value="yes" id="face-consent" required> I understand how this face data is used and consent to registering my face for attendance recognition.</label>
+        <div class="student-face-camera"><video id="face-video" autoplay muted playsinline aria-label="Camera preview"></video><canvas id="face-canvas" hidden></canvas></div>
+        <div class="student-profile-form">
+            <button class="panel-button" type="button" id="start-camera">Start camera</button>
+            <button class="panel-button" type="button" id="capture-face" disabled>Capture photo</button>
+            <button class="panel-button" type="button" id="stop-camera" disabled>Stop camera</button>
+            <label for="face-image">Or choose a photo</label><input type="file" id="face-image" name="image" accept="image/jpeg,image/png,image/webp,image/bmp">
+            <p id="camera-status" role="status" aria-live="polite">Accept consent before starting the camera.</p>
+        </div>
+        <footer class="teacher-student-form-actions"><a class="panel-button" href="{{ url_for('student.profile') }}">Cancel</a><button class="panel-button primary" type="submit">Submit face registration</button></footer>
+    </form>
+    {% endif %}
+</section>
+<script>
+(() => {
+    const consent = document.getElementById('face-consent');
+    if (!consent) return;
+    const video = document.getElementById('face-video');
+    const canvas = document.getElementById('face-canvas');
+    const captured = document.getElementById('captured-image');
+    const image = document.getElementById('face-image');
+    const status = document.getElementById('camera-status');
+    const start = document.getElementById('start-camera');
+    const capture = document.getElementById('capture-face');
+    const stop = document.getElementById('stop-camera');
+    let stream = null;
+    const stopCamera = () => {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        video.srcObject = null;
+        capture.disabled = true;
+        stop.disabled = true;
+    };
+    start.addEventListener('click', async () => {
+        if (!consent.checked) { status.textContent = 'Accept the consent checkbox before requesting camera access.'; return; }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { status.textContent = 'Camera access is unavailable in this browser. Choose a photo file instead.'; return; }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'user'}, audio: false});
+            video.srcObject = stream;
+            await video.play();
+            capture.disabled = false;
+            stop.disabled = false;
+            status.textContent = 'Camera is ready. Position your face in the frame and capture.';
+        } catch (error) {
+            status.textContent = 'Camera permission or device access failed. Allow camera access or choose a photo file.';
+            stopCamera();
+        }
+    });
+    capture.addEventListener('click', () => {
+        if (!consent.checked || !stream || !video.videoWidth) { status.textContent = 'Allow camera access and wait for the preview before capturing.'; return; }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        captured.value = canvas.toDataURL('image/jpeg', 0.9);
+        image.value = '';
+        status.textContent = 'Photo captured. Submit to validate and register it.';
+        stopCamera();
+    });
+    stop.addEventListener('click', () => { stopCamera(); status.textContent = 'Camera stopped.'; });
+    image.addEventListener('change', () => { captured.value = ''; if (image.files.length) { stopCamera(); status.textContent = 'Photo selected. Submit to validate and register it.'; } });
+    consent.addEventListener('change', () => { if (!consent.checked) stopCamera(); });
+    document.getElementById('face-registration-form').addEventListener('submit', event => {
+        if (!consent.checked || (!captured.value && !image.files.length)) { event.preventDefault(); status.textContent = 'Accept consent and capture a photo or choose an image file.'; }
+    });
+    window.addEventListener('beforeunload', stopCamera);
+})();
+</script>
+{% endblock %}

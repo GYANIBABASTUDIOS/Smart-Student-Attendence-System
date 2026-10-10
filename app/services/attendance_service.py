@@ -80,6 +80,7 @@ def mark_attendance(
     on_date: date_type | None = None,
     confidence: float | None = None,
     marked_by: str = "System",
+    marked_by_user_id: int | None = None,
     overwrite: bool = False,
 ) -> MarkResult:
     """Record attendance for ``student``, at most once per day.
@@ -99,6 +100,7 @@ def mark_attendance(
         status=final_status,
         confidence_score=confidence,
         marked_by=marked_by,
+        marked_by_user_id=marked_by_user_id,
     )
     try:
         # A SAVEPOINT so that a constraint violation rolls back only this insert and
@@ -116,6 +118,7 @@ def mark_attendance(
             previous = existing.status
             existing.status = final_status
             existing.marked_by = marked_by
+            existing.marked_by_user_id = marked_by_user_id
             if confidence is not None:
                 existing.confidence_score = confidence
             db.session.commit()

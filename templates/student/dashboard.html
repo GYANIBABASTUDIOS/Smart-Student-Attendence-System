@@ -1,0 +1,27 @@
+{% extends "student/base_student.html" %}
+{% block content %}
+<section class="panel-welcome" aria-label="Student dashboard introduction">
+    <div><p class="panel-eyebrow">STUDENT WORKSPACE</p><h2>Welcome, {{ student.name }}</h2><p>Your personal attendance, class, and leave information.</p></div>
+    <a class="panel-button primary" href="{{ url_for('student.leaves') }}"><i class="fa-solid fa-plus" aria-hidden="true"></i>Request leave</a>
+</section>
+
+<section class="panel-metric-grid student-metrics" aria-label="Your attendance summary">
+    <article class="panel-metric-card"><div class="metric-icon blue"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i></div><p>Attendance rate</p><strong>{% if attendance.rate is not none %}{{ attendance.rate }}<span>%</span>{% else %}—{% endif %}</strong><small>Present and late marks ÷ present, late, and absent marks</small></article>
+    <article class="panel-metric-card"><div class="metric-icon green"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div><p>Present / late</p><strong>{{ attendance.present }}</strong><small>Recorded attendance</small></article>
+    <article class="panel-metric-card"><div class="metric-icon red"><i class="fa-solid fa-user-xmark" aria-hidden="true"></i></div><p>Absent</p><strong>{{ attendance.absent }}</strong><small>Recorded absences</small></article>
+    <article class="panel-metric-card"><div class="metric-icon violet"><i class="fa-solid fa-door-open" aria-hidden="true"></i></div><p>My class</p><strong class="student-class-value">{{ student.class_section.name if student.class_section else 'Not linked' }}</strong><small>{% if student.class_section %}{{ student.class_section.department.name }} · Year {{ student.class_section.year }} · Section {{ student.class_section.section }}{% else %}Ask your school administrator to link a class{% endif %}</small></article>
+</section>
+
+<section class="panel-panel student-identity-panel"><div class="panel-panel-heading"><div><h2>Your student profile</h2><p>Information linked to your account.</p></div><a class="panel-button" href="{{ url_for('student.profile') }}">View profile</a></div><dl class="student-identity-grid"><div><dt>Student name</dt><dd>{{ student.name }}</dd></div><div><dt>Student identifier</dt><dd>{{ student.student_id }}</dd></div><div><dt>Email</dt><dd>{{ student.email }}</dd></div><div><dt>Department</dt><dd>{{ student.class_section.department.name if student.class_section else student.department or 'Not available' }}</dd></div></dl></section>
+
+<div class="panel-panel-grid student-dashboard-grid">
+    <section class="panel-panel"><div class="panel-panel-heading"><div><h2>Recent attendance</h2><p>Your latest recorded attendance marks.</p></div><a class="student-text-link" href="{{ url_for('student.attendance') }}">View history</a></div>
+        {% if recent_attendance %}<div class="teacher-student-table-wrap"><table class="teacher-student-table"><caption class="visually-hidden">Your recent attendance</caption><thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Time</th></tr></thead><tbody>{% for record in recent_attendance %}<tr><td>{{ record.date }}</td><td><span class="teacher-attendance-status {{ record.status|lower|replace(' ', '-') }}">{{ record.status }}</span></td><td>{{ record.time_in|localtime('%I:%M %p') if record.time_in else '—' }}</td></tr>{% endfor %}</tbody></table></div>
+        {% else %}<div class="student-empty-state"><h3>No attendance records yet</h3><p>Your attendance history will appear here when your school records it.</p></div>{% endif %}
+    </section>
+    <section class="panel-panel"><div class="panel-panel-heading"><div><h2>Recent leave requests</h2><p>Only requests submitted from your account are shown.</p></div><a class="student-text-link" href="{{ url_for('student.leaves') }}">View requests</a></div>
+        {% if recent_leaves %}<div class="student-leave-list">{% for leave in recent_leaves %}<article><div><strong>{{ leave.leave_type }} leave</strong><small>{{ leave.start_date }} – {{ leave.end_date }} · {{ leave.duration_days }} day(s)</small></div><span class="teacher-attendance-status {{ leave.status|lower }}">{{ leave.status }}</span></article>{% endfor %}</div>
+        {% else %}<div class="student-empty-state"><h3>No leave requests</h3><p>Submit a request when you need to ask for leave.</p><a class="panel-button primary" href="{{ url_for('student.leaves') }}">Request leave</a></div>{% endif %}
+    </section>
+</div>
+{% endblock %}

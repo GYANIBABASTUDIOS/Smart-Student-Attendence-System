@@ -1,0 +1,85 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Reports & Analytics · Smart Attendance{% endblock %}
+{% block page_heading %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<section class="panel-welcome" aria-label="Reports introduction">
+    <div>
+        <p class="panel-eyebrow">ADMIN REPORTING</p>
+        <h2>Reports &amp; Analytics</h2>
+        <p>Campus-wide attendance and academic summaries from recorded system data.</p>
+    </div>
+    {% if data %}
+    <a class="panel-button primary" href="{{ url_for('admin.export_reports', **request.args.to_dict()) }}">
+        <i class="fa-solid fa-download" aria-hidden="true"></i> Export summary CSV
+    </a>
+    {% endif %}
+</section>
+
+<section class="panel-panel admin-report-filters" aria-labelledby="report-filter-heading">
+    <div class="panel-panel-heading"><div><h2 id="report-filter-heading">Report filters</h2><p>Attendance periods cannot include future dates. Academic filters use explicit class-section relationships; legacy text is shown separately.</p></div></div>
+    <form method="get" action="{{ url_for('admin.reports') }}" class="admin-report-filter-form">
+        <label>Start date<input type="date" name="start_date" value="{{ filters.window.start.isoformat() if filters else request.args.get('start_date', '') }}" required></label>
+        <label>End date<input type="date" name="end_date" value="{{ filters.window.end.isoformat() if filters else request.args.get('end_date', '') }}" required></label>
+        <label>Department
+            <select name="department_id" id="report-department">
+                <option value="">All departments</option>
+                {% for department in departments %}<option value="{{ department.id }}" {% if filters and filters.department_id == department.id %}selected{% endif %}>{{ department.name }} ({{ department.code }})</option>{% endfor %}
+            </select>
+        </label>
+        <label>Class / section
+            <select name="class_section_id" id="report-class">
+                <option value="">All linked classes</option>
+                {% for class_section in classes %}<option value="{{ class_section.id }}" {% if filters and filters.class_section_id == class_section.id %}selected{% endif %}>{{ class_section.department.name }} · {{ class_section.name }} · {{ class_section.year }} / {{ class_section.section }}</option>{% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="panel-button primary"><i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters</button>
+    </form>
+    {% if error %}<p class="admin-report-error" role="alert">{{ error }}</p>{% endif %}
+</section>
+
+{% if data %}
+<p class="admin-report-formula">Attendance rate = recorded Present + Late marks ÷ recorded Present + Late + Absent marks. Missing marks, Excused, and On Leave records are excluded.</p>
+
+<section class="panel-metric-grid admin-report-metrics" aria-label="Report summary">
+    <article class="panel-metric-card"><div class="metric-icon blue"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></div><p>Total students</p><strong>{{ data.total_students }}</strong><small>Matching the selected academic scope</small></article>
+    <article class="panel-metric-card"><div class="metric-icon violet"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></div><p>Total teachers</p><strong>{{ data.total_teachers }}</strong><small>All teacher profiles</small></article>
+    <article class="panel-metric-card"><div class="metric-icon teal"><i class="fa-solid fa-building-columns" aria-hidden="true"></i></div><p>Departments</p><strong>{{ data.total_departments }}</strong><small>Academic departments</small></article>
+    <article class="panel-metric-card"><div class="metric-icon amber"><i class="fa-solid fa-door-open" aria-hidden="true"></i></div><p>Classes</p><strong>{{ data.total_classes }}</strong><small>Class sections</small></article>
+    <article class="panel-metric-card"><div class="metric-icon green"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div><p>Present</p><strong>{{ data.present_count }}</strong><small>Includes late records</small></article>
+    <article class="panel-metric-card"><div class="metric-icon red"><i class="fa-solid fa-user-xmark" aria-hidden="true"></i></div><p>Absent</p><strong>{{ data.absent_count }}</strong><small>Recorded absent</small></article>
+    <article class="panel-metric-card"><div class="metric-icon blue"><i class="fa-solid fa-percent" aria-hidden="true"></i></div><p>Overall attendance</p><strong>{{ data.attendance_rate }}<span>%</span></strong><small>{{ data.attendance_denominator }} eligible recorded marks</small></article>
+    <article class="panel-metric-card"><div class="metric-icon amber"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></div><p>Pending leaves</p><strong>{{ data.leave_counts.Pending }}</strong><small>Across scoped students</small></article>
+</section>
+
+<section class="panel-panel admin-report-section" aria-labelledby="trend-title">
+    <div class="panel-panel-heading"><div><h2 id="trend-title">Daily attendance trend</h2><p>Present includes late arrivals. The table remains available when the selected range has no records.</p></div></div>
+    <div class="admin-report-table-wrap"><table class="admin-report-table"><caption class="sr-only">Attendance counts for each date in the selected period</caption><thead><tr><th scope="col">Date</th><th scope="col">Present / Late</th><th scope="col">Absent</th><th scope="col">Recorded attendance rate</th></tr></thead><tbody>
+    {% for row in data.trend %}<tr><th scope="row">{{ row.date }}</th><td>{{ row.present }} <span class="admin-report-muted">({{ row.late }} late)</span></td><td>{{ row.absent }}</td><td><div class="admin-report-rate"><span>{{ row.rate }}%</span><span class="admin-report-rate-track" aria-hidden="true"><span style="width: {{ row.rate }}%"></span></span></div></td></tr>{% else %}<tr><td colspan="4">No dates in this report range.</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if data.attendance_total == 0 %}<p class="admin-report-empty">No attendance records were found for these filters.</p>{% endif %}
+</section>
+
+<div class="panel-panel-grid top-panels admin-report-section">
+    <section class="panel-panel" aria-labelledby="department-report-title">
+        <div class="panel-panel-heading"><div><h2 id="department-report-title">Department summary</h2><p>Linked departments and legacy text are kept in separate groups.</p></div></div>
+        <h3 class="admin-report-subheading">Linked academic departments</h3>
+        {% set rows = data.department_rows.linked %}
+        {% if rows %}<div class="admin-report-table-wrap"><table class="admin-report-table"><thead><tr><th scope="col">Department</th><th scope="col">Students</th><th scope="col">Present / absent marks</th><th scope="col">Rate</th></tr></thead><tbody>{% for row in rows %}<tr><th scope="row">{{ row.name }}</th><td>{{ row.students }}</td><td>{{ row.present }} / {{ row.absent }}</td><td>{{ row.rate }}%</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="admin-report-empty">No linked department attendance to report.</p>{% endif %}
+        <h3 class="admin-report-subheading">Legacy student department text</h3>
+        {% set rows = data.department_rows.legacy %}
+        {% if rows %}<div class="admin-report-table-wrap"><table class="admin-report-table"><thead><tr><th scope="col">Stored label</th><th scope="col">Students</th><th scope="col">Present / absent marks</th><th scope="col">Rate</th></tr></thead><tbody>{% for row in rows %}<tr><th scope="row">{{ row.name }}</th><td>{{ row.students }}</td><td>{{ row.present }} / {{ row.absent }}</td><td>{{ row.rate }}%</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="admin-report-empty">No student records to report.</p>{% endif %}
+    </section>
+    <section class="panel-panel" aria-labelledby="class-report-title">
+        <div class="panel-panel-heading"><div><h2 id="class-report-title">Class / section summary</h2><p>Includes students only when a class-section relationship exists.</p></div></div>
+        {% if data.class_rows %}<div class="admin-report-table-wrap"><table class="admin-report-table"><thead><tr><th scope="col">Class / section</th><th scope="col">Students</th><th scope="col">Present / absent marks</th><th scope="col">Rate</th></tr></thead><tbody>{% for row in data.class_rows %}<tr><th scope="row">{{ row.name }}</th><td>{{ row.students }}</td><td>{{ row.present }} / {{ row.absent }}</td><td>{{ row.rate }}%</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="admin-report-empty">No linked class-section records to report. Legacy year and section text is not mapped.</p>{% endif %}
+    </section>
+</div>
+
+<section class="panel-panel admin-report-section" aria-labelledby="leave-report-title">
+    <div class="panel-panel-heading"><div><h2 id="leave-report-title">Leave summary</h2><p>Leave request counts for the selected student/class scope.</p></div><a class="panel-link" href="{{ url_for('leave.index') }}">Open leave page <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
+    <div class="admin-leave-summary"><span>Pending <strong>{{ data.leave_counts.Pending }}</strong></span><span>Approved <strong>{{ data.leave_counts.Approved }}</strong></span><span>Rejected <strong>{{ data.leave_counts.Rejected }}</strong></span></div>
+</section>
+{% endif %}
+{% endblock %}

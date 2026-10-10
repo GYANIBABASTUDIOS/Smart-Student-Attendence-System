@@ -1,0 +1,53 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ heading }} · Admin Panel{% endblock %}
+{% block page_heading %}{{ heading }}{% endblock %}
+
+{% block content %}
+<section class="structure-page-heading"><div><p class="panel-eyebrow"><a href="{{ url_for('admin.classes') }}">CLASSES &amp; SECTIONS</a> / {{ heading|upper }}</p><h2>{{ heading }}</h2><p>Set the class-section details and manage teacher assignments.</p></div>{% if class_section %}<span class="teacher-status {{ 'active' if class_section.is_active else 'inactive' }}">{{ 'Active' if class_section.is_active else 'Inactive' }}</span>{% endif %}</section>
+
+<form class="teacher-form panel-panel" method="post" action="{% if class_section %}{{ url_for('admin.edit_class', class_id=class_section.id) }}{% else %}{{ url_for('admin.create_class') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors.get('form') %}<div class="teacher-form-error" role="alert">{{ errors.form }}</div>{% endif %}
+    <section class="teacher-form-section">
+        <div class="teacher-form-section-heading"><h3>Class / section details</h3><p>Each year and section combination must be unique within its department.</p></div>
+        {% if not departments %}<div class="teacher-coming-soon structure-department-required">Create or activate a department before adding a class section. <a href="{{ url_for('admin.departments') }}">Manage Departments</a></div>{% endif %}
+        <div class="teacher-form-grid">
+            <div class="teacher-field {% if errors.get('name') %}has-error{% endif %}"><label for="name">Class name <span aria-hidden="true">*</span></label><input id="name" name="name" type="text" maxlength="100" required value="{{ values.get('name', '') }}" placeholder="e.g. Year 1 A">{% if errors.get('name') %}<small class="field-error">{{ errors.name }}</small>{% endif %}</div>
+            <div class="teacher-field {% if errors.get('department_id') %}has-error{% endif %}"><label for="department_id">Department <span aria-hidden="true">*</span></label><select id="department_id" name="department_id" required><option value="">Choose a department</option>{% for department in departments %}<option value="{{ department.id }}" {% if values.get('department_id', '')|string == department.id|string %}selected{% endif %}>{{ department.name }}{% if not department.is_active %} (Inactive - existing assignment){% endif %}</option>{% endfor %}</select>{% if errors.get('department_id') %}<small class="field-error">{{ errors.department_id }}</small>{% endif %}</div>
+            <div class="teacher-field {% if errors.get('year') %}has-error{% endif %}"><label for="year">Year <span aria-hidden="true">*</span></label><input id="year" name="year" type="text" maxlength="10" required value="{{ values.get('year', '') }}" placeholder="e.g. 1 or First Year">{% if errors.get('year') %}<small class="field-error">{{ errors.year }}</small>{% endif %}</div>
+            <div class="teacher-field {% if errors.get('section') %}has-error{% endif %}"><label for="section">Section <span aria-hidden="true">*</span></label><input id="section" name="section" type="text" maxlength="5" required value="{{ values.get('section', '') }}" placeholder="e.g. A">{% if errors.get('section') %}<small class="field-error">{{ errors.section }}</small>{% endif %}</div>
+        </div>
+    </section>
+    <footer class="teacher-form-actions"><a class="teacher-button secondary" href="{{ url_for('admin.classes') }}">Cancel</a><button class="teacher-button primary" type="submit" {% if not departments %}disabled{% endif %}><i class="fa-solid fa-check" aria-hidden="true"></i> {{ 'Save changes' if class_section else 'Create Class / Section' }}</button></footer>
+</form>
+
+{% if class_section %}
+<section class="structure-assignment panel-panel">
+    <div class="structure-assignment-heading"><div><h2>Assigned teachers</h2><p>Assignments are stored in the existing teacher-class assignment records.</p></div></div>
+    {% if assignments %}
+    <div class="structure-assignment-list">
+        {% for assignment in assignments %}
+        <div class="structure-assignment-row">
+            <span class="panel-avatar" aria-hidden="true">{{ assignment.teacher.name[:1]|upper }}</span>
+            <span class="structure-assignment-copy"><strong>{{ assignment.teacher.name }}</strong><small>{{ assignment.teacher.employee_id }} · {{ assignment.teacher.user.username }}{% if not assignment.teacher.is_active or not assignment.teacher.user.is_active %} · Inactive account{% endif %}</small></span>
+            <form method="post" action="{{ url_for('admin.remove_class_teacher', class_id=class_section.id, assignment_id=assignment.id) }}" onsubmit="return confirm('Remove this teacher assignment? The assignment record will be retained as inactive.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="teacher-icon-button danger" type="submit"><i class="fa-solid fa-link-slash" aria-hidden="true"></i><span>Remove</span></button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}<div class="structure-assignment-empty">No active teachers are assigned to this class section.</div>{% endif %}
+
+    {% if available_teachers and class_section.is_active %}
+    <form class="structure-assign-form" method="post" action="{{ url_for('admin.add_class_teacher', class_id=class_section.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="teacher_id">Assign a teacher</label>
+        <select id="teacher_id" name="teacher_id" required><option value="">Choose an active teacher</option>{% for teacher in available_teachers %}<option value="{{ teacher.id }}">{{ teacher.name }}{% if teacher.department %} · {{ teacher.department.name }}{% endif %}</option>{% endfor %}</select>
+        <button class="teacher-button primary" type="submit"><i class="fa-solid fa-link" aria-hidden="true"></i> Assign Teacher</button>
+    </form>
+    {% elif not class_section.is_active %}<div class="teacher-coming-soon">Activate this class section before assigning teachers.</div>
+    {% elif not available_teachers %}<div class="teacher-coming-soon">No unassigned active teachers are available for this class.</div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "student/base_student.html" %}
+{% block page_heading %}My Attendance{% endblock %}
+{% block content %}
+<section class="panel-welcome"><div><p class="panel-eyebrow">PERSONAL RECORD</p><h2>Attendance history</h2><p>Showing your latest 100 attendance records.</p></div></section>
+<section class="panel-panel"><div class="panel-panel-heading"><div><h2>{{ student.name }} <small>· {{ student.student_id }}</small></h2><p>Attendance information linked to your student profile.</p></div></div>
+{% if records %}<div class="teacher-student-table-wrap"><table class="teacher-student-table"><caption class="visually-hidden">Your attendance history</caption><thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Time in</th><th scope="col">Time out</th></tr></thead><tbody>{% for record in records %}<tr><td>{{ record.date }}</td><td><span class="teacher-attendance-status {{ record.status|lower|replace(' ', '-') }}">{{ record.status }}</span></td><td>{{ record.time_in|localtime('%I:%M %p') if record.time_in else '—' }}</td><td>{{ record.time_out|localtime('%I:%M %p') if record.time_out else '—' }}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}<div class="student-empty-state"><h3>No attendance history yet</h3><p>Attendance entries will show here after they are recorded.</p></div>{% endif %}
+</section>
+{% endblock %}

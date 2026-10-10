@@ -1,0 +1,57 @@
+{% extends "teacher/base_teacher.html" %}
+
+{% block title %}Teacher Dashboard · Smart Attendance{% endblock %}
+{% block content %}
+<section class="panel-welcome" aria-label="Teacher dashboard introduction">
+    <div>
+        <p class="panel-eyebrow">TEACHER WORKSPACE</p>
+        <h2>Welcome, {{ teacher.name }}</h2>
+        <p>Your assigned classes and their recent attendance activity.</p>
+    </div>
+</section>
+
+<section class="panel-metric-grid" aria-label="Teacher summary">
+    <article class="panel-metric-card"><div class="metric-icon blue"><i class="fa-solid fa-door-open" aria-hidden="true"></i></div><p>Assigned classes</p><strong>{{ total_classes }}</strong><small>Active class assignments</small></article>
+    <article class="panel-metric-card"><div class="metric-icon violet"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></div><p>Students in assigned classes</p><strong>{{ total_students }}</strong><small>Active students linked to those sections</small></article>
+    <article class="panel-metric-card"><div class="metric-icon green"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div><p>Present this week</p><strong>{{ attendance.present }}</strong><small>Includes late marks</small></article>
+    <article class="panel-metric-card"><div class="metric-icon red"><i class="fa-solid fa-user-xmark" aria-hidden="true"></i></div><p>Absent this week</p><strong>{{ attendance.absent }}</strong><small>Recorded absences</small></article>
+    <article class="panel-metric-card"><div class="metric-icon teal"><i class="fa-solid fa-percent" aria-hidden="true"></i></div><p>Recorded attendance rate</p><strong>{{ attendance.rate }}<span>%</span></strong><small>{{ attendance.recorded_marks }} present, late, or absent marks</small></article>
+</section>
+
+<div class="panel-panel-grid top-panels teacher-dashboard-panels">
+    <section class="panel-panel" aria-labelledby="teacher-classes-title">
+        <div class="panel-panel-heading"><div><h2 id="teacher-classes-title">My assigned classes</h2><p>Class access comes from your active teacher-class assignments.</p></div></div>
+        {% if classes %}
+        <div class="teacher-class-list">
+            {% for row in classes %}
+            <article class="teacher-class-card">
+                <span class="metric-icon blue"><i class="fa-solid fa-door-open" aria-hidden="true"></i></span>
+                <div><h3>{{ row.class_section.name }}</h3><p>{{ row.class_section.department.name }} · Year {{ row.class_section.year }} · Section {{ row.class_section.section }}</p></div>
+                <strong>{{ row.student_count }} <small>students</small></strong>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="teacher-dashboard-empty"><span class="metric-icon blue"><i class="fa-solid fa-link-slash" aria-hidden="true"></i></span><h3>No active class assignments</h3><p>Your dashboard will show class and student totals after an administrator assigns an active class section to your account.</p></div>
+        {% endif %}
+    </section>
+
+    <section class="panel-panel" aria-labelledby="teacher-trend-title">
+        <div class="panel-panel-heading"><div><h2 id="teacher-trend-title">Attendance this week</h2><p>Recorded daily present (including late) and absent marks.</p></div></div>
+        {% if has_assignments %}
+        <div class="panel-chart-wrap"><canvas id="weekly-attendance-chart" role="img" aria-label="Bar chart of daily attendance for the teacher's assigned classes">Attendance trend chart</canvas></div>
+        <script id="weekly-attendance-data" type="application/json">{{ attendance.trend|tojson }}</script>
+        {% else %}<p class="teacher-dashboard-unavailable">Attendance appears here once active class assignments exist.</p>{% endif %}
+        <p class="teacher-dashboard-formula">Rate = (Present + Late) ÷ (Present + Late + Absent). Missing marks and other statuses are not counted as absences.</p>
+    </section>
+</div>
+
+<section class="panel-panel teacher-dashboard-activity" aria-labelledby="teacher-activity-title">
+    <div class="panel-panel-heading"><div><h2 id="teacher-activity-title">Recent attendance activity</h2><p>Latest records for active students currently linked to your assigned classes.</p></div></div>
+    {% if recent_activity %}
+    <div class="teacher-activity-table-wrap"><table class="teacher-activity-table"><caption class="visually-hidden">Recent attendance records for your assigned classes</caption><thead><tr><th scope="col">Student</th><th scope="col">Class</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Time</th></tr></thead><tbody>
+    {% for record in recent_activity %}<tr><th scope="row">{{ record.student.name }} <small>{{ record.student.student_id }}</small></th><td>{{ record.student.class_section.name }}</td><td>{{ record.date }}</td><td><span class="teacher-attendance-status {{ record.status|lower|replace(' ', '-') }}">{{ record.status }}</span></td><td>{{ record.time_in|localtime('%I:%M %p') if record.time_in else '—' }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="teacher-dashboard-empty compact"><h3>No recent attendance records</h3><p>Records for students in your assigned classes will appear here.</p></div>{% endif %}
+</section>
+{% endblock %}

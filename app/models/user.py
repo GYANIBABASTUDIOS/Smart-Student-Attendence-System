@@ -1,8 +1,9 @@
 """Operator accounts.
 
 The system previously had no authentication at all: any anonymous visitor could delete
-students, rewrite attendance and export the whole roster.  Two roles are enough here --
-a teacher runs attendance day to day, an admin can also destroy data and manage users.
+students, rewrite attendance and export the whole roster.  Login roles distinguish
+administrators, teachers, and students. Student accounts use their linked active
+Student profile in the Student Panel.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from app.utils.time import utcnow
 class Role(StrEnum):
     ADMIN = "admin"
     TEACHER = "teacher"
+    STUDENT = "student"
 
 
 class User(UserMixin, db.Model):
@@ -35,6 +37,18 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(
         db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    teacher_profile = db.relationship(
+        "Teacher", back_populates="user", uselist=False
+    )
+    student_profile = db.relationship(
+        "Student", back_populates="user", uselist=False
+    )
+    attendance_marks = db.relationship(
+        "AttendanceRecord",
+        back_populates="marked_by_user",
+        foreign_keys="AttendanceRecord.marked_by_user_id",
     )
 
     # --- password handling -------------------------------------------------------

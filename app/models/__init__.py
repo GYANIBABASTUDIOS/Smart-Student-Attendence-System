@@ -7,15 +7,21 @@ this package (``from app.models import Student``) rather than from the submodule
 from __future__ import annotations
 
 from app.models.attendance import AttendanceRecord, AttendanceSession
+from app.models.academic import ClassSection, Department
 from app.models.leave import LeaveRequest
 from app.models.student import Student
+from app.models.teacher import Teacher, TeacherClassAssignment
 from app.models.user import Role, User
 
 __all__ = [
     "AttendanceRecord",
     "AttendanceSession",
+    "ClassSection",
+    "Department",
     "LeaveRequest",
     "Role",
     "Student",
+    "Teacher",
+    "TeacherClassAssignment",
     "User",
 ]

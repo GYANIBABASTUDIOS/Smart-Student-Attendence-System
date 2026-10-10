@@ -1,0 +1,51 @@
+{% extends "teacher/base_teacher.html" %}
+
+{% block title %}My Students · Teacher Panel{% endblock %}
+{% block page_heading %}My Students{% endblock %}
+{% block content %}
+<section class="panel-welcome" aria-label="Student list introduction">
+    <div><p class="panel-eyebrow">TEACHER WORKSPACE</p><h2>My Students</h2><p>Manage student records only in your active assigned classes.</p></div>
+    {% if classes %}<a class="panel-button primary" href="{{ url_for('teacher.create_student') }}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Register Student</a>{% endif %}
+</section>
+
+<section class="panel-panel teacher-student-directory" aria-labelledby="student-directory-title">
+    <div class="panel-panel-heading"><div><h2 id="student-directory-title">Student directory</h2><p>{{ pagination.total }} result{% if pagination.total != 1 %}s{% endif %} in your authorized scope</p></div></div>
+    <form method="get" action="{{ url_for('teacher.students') }}" class="teacher-student-filters">
+        <label for="teacher-student-search">Search</label>
+        <input id="teacher-student-search" type="search" name="search" value="{{ search }}" placeholder="Student name or identifier">
+        <label for="teacher-student-class">Assigned class</label>
+        <select id="teacher-student-class" name="class_section_id"><option value="">All assigned classes</option>{% for class_section in classes %}<option value="{{ class_section.id }}" {% if current_class_id == class_section.id %}selected{% endif %}>{{ class_section.department.name }} · {{ class_section.name }} · {{ class_section.year }}/{{ class_section.section }}</option>{% endfor %}</select>
+        <label for="teacher-student-status">Status</label>
+        <select id="teacher-student-status" name="status"><option value="active" {% if current_status == 'active' %}selected{% endif %}>Active</option><option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Inactive</option><option value="all" {% if current_status == 'all' %}selected{% endif %}>All</option></select>
+        <button type="submit" class="panel-button primary"><i class="fa-solid fa-filter" aria-hidden="true"></i> Apply</button>
+    </form>
+
+    {% if not classes %}
+    <div class="teacher-dashboard-empty"><span class="metric-icon blue"><i class="fa-solid fa-link-slash" aria-hidden="true"></i></span><h3>No active class assignments</h3><p>An administrator must assign an active class section to your teacher account before you can view or manage students.</p></div>
+    {% elif students %}
+    <div class="teacher-student-table-wrap"><table class="teacher-student-table"><thead><tr><th scope="col">Student</th><th scope="col">Identifier</th><th scope="col">Department</th><th scope="col">Class / section</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>
+        {% for student in students %}<tr>
+            <th scope="row">{{ student.name }}</th>
+            <td>{{ student.student_id }}</td>
+            <td>{{ student.department or student.class_section.department.name }}</td>
+            <td>{{ student.class_section.name }} · {{ student.year }}/{{ student.section }}</td>
+            <td>{{ student.email }}</td>
+            <td><span class="teacher-student-status {{ 'active' if student.is_active else 'inactive' }}">{{ 'Active' if student.is_active else 'Inactive' }}</span></td>
+            <td class="teacher-student-actions"><a class="teacher-student-action" href="{{ url_for('teacher.edit_student', student_id=student.id) }}"><i class="fa-solid fa-pen" aria-hidden="true"></i><span>Edit</span></a>
+                <form method="post" action="{{ url_for('teacher.update_student_status', student_id=student.id) }}" {% if student.is_active %}onsubmit="return confirm('Deactivate this student? Attendance history and face sample files will be preserved.')"{% endif %}>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="active" value="{{ 'false' if student.is_active else 'true' }}">
+                    <button class="teacher-student-action {{ 'danger' if student.is_active else 'reactivate' }}" type="submit"><i class="fa-solid {{ 'fa-user-slash' if student.is_active else 'fa-user-check' }}" aria-hidden="true"></i><span>{{ 'Deactivate' if student.is_active else 'Reactivate' }}</span></button>
+                </form>
+            </td>
+        </tr>{% endfor %}
+    </tbody></table></div>
+    <nav class="teacher-student-pagination" aria-label="Student pages">
+        {% if pagination.has_prev %}<a class="panel-button" href="{{ url_for('teacher.students', page=pagination.prev_num, per_page=per_page, search=search, class_section_id=current_class_id or '', status=current_status) }}">Previous</a>{% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
+        {% if pagination.has_next %}<a class="panel-button" href="{{ url_for('teacher.students', page=pagination.next_num, per_page=per_page, search=search, class_section_id=current_class_id or '', status=current_status) }}">Next</a>{% endif %}
+    </nav>
+    {% else %}
+    <div class="teacher-dashboard-empty compact"><h3>{% if search %}No matching students{% elif current_status == 'inactive' %}No inactive students{% else %}No students in this view{% endif %}</h3><p>{% if search %}Try a different name or student identifier.{% elif current_class_id %}This assigned class has no students matching the selected status.{% else %}Students in your assigned classes will appear here.{% endif %}</p></div>
+    {% endif %}
+</section>
+{% endblock %}

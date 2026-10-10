@@ -77,7 +77,10 @@ class TestLogin:
     def test_correct_credentials_start_a_session(self, client, admin):  # noqa: ARG002
         response = client.post("/login", data={"username": "admin", "password": ADMIN_PASSWORD})
         assert response.status_code == 302
-        assert client.get("/").status_code == 200
+        assert response.headers["Location"].endswith("/admin/")
+        root = client.get("/", follow_redirects=True)
+        assert root.status_code == 200
+        assert b"Admin Dashboard" in root.data
 
     def test_wrong_password_is_refused(self, client, admin):  # noqa: ARG002
         response = client.post("/login", data={"username": "admin", "password": "wrong"})
@@ -142,9 +145,11 @@ class TestRoles:
         assert response.status_code == 200
         assert response.get_json()["success"] is True
 
-    def test_teacher_can_soft_delete(self, teacher_client, students):
+    def test_teacher_without_profile_cannot_soft_delete(self, teacher_client, students, db):
         response = teacher_client.post(f"/delete_student/{students[0].id}")
-        assert response.status_code == 200
+        assert response.status_code == 403
+        db.session.refresh(students[0])
+        assert students[0].is_active is True
 
     def test_teacher_cannot_rebuild_the_face_model(self, teacher_client):
         assert teacher_client.post("/rebuild_face_model").status_code == 403

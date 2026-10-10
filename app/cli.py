@@ -8,6 +8,7 @@ from flask.cli import with_appcontext
 
 from app.extensions import db
 from app.models import Role, User
+from app.services.user_service import UserManagementError, deactivate_user_account
 
 
 def register_commands(app: Flask) -> None:
@@ -38,7 +39,7 @@ def create_admin(username: str, email: str, password: str) -> None:
 @click.option("--email", prompt=True)
 @click.option(
     "--role",
-    type=click.Choice([Role.ADMIN.value, Role.TEACHER.value]),
+    type=click.Choice([Role.ADMIN.value, Role.TEACHER.value, Role.STUDENT.value]),
     default=Role.TEACHER.value,
 )
 @click.password_option("--password", confirmation_prompt=True)
@@ -89,8 +90,10 @@ def deactivate_user(username: str) -> None:
     user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
     if user is None:
         raise click.ClickException(f"No user named {username!r}")
-    user.is_active_flag = False
-    db.session.commit()
+    try:
+        deactivate_user_account(user)
+    except UserManagementError as exc:
+        raise click.ClickException(str(exc)) from exc
     click.echo(f"Deactivated '{username}'.")
 
 

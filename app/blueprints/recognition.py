@@ -9,13 +9,30 @@ cross-site form post.  CSRF applies now; the JavaScript sends the token in an
 from __future__ import annotations
 
 from flask import Blueprint, Response, current_app, jsonify
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.extensions import limiter
 from app.recognition import CameraError, get_pipeline
 from app.services.student_service import known_students
 
 recognition_bp = Blueprint("recognition", __name__)
+
+
+def _legacy_camera_guard():
+    """Keep the process-wide legacy camera API outside Teacher class sessions."""
+    if current_user.has_role("student"):
+        return jsonify(
+            {"success": False, "message": "Students cannot control face recognition."}
+        ), 403
+    if current_user.has_role("teacher"):
+        return jsonify(
+            {"success": False, "message": "Use class-scoped Teacher attendance recognition."}
+        ), 403
+    if current_app.extensions.get("teacher_recognition_owner") is not None:
+        return jsonify(
+            {"success": False, "message": "The shared camera is reserved for an active Teacher class session."}
+        ), 409
+    return None
 
 
 def _known_payload():
@@ -32,6 +49,9 @@ def _known_payload():
 @limiter.limit("20 per minute")
 def start_detection():
     """Open the camera for preview only, without recognition."""
+    denied = _legacy_camera_guard()
+    if denied is not None:
+        return denied
     pipeline = get_pipeline()
     try:
         pipeline.start(preview_only=True)
@@ -44,6 +64,9 @@ def start_detection():
 @login_required
 @limiter.limit("20 per minute")
 def start_face_recognition():
+    denied = _legacy_camera_guard()
+    if denied is not None:
+        return denied
     pipeline = get_pipeline()
     students = _known_payload()
     if not students:
@@ -87,6 +110,9 @@ def start_face_recognition():
 @login_required
 @limiter.limit("30 per minute")
 def stop_detection():
+    denied = _legacy_camera_guard()
+    if denied is not None:
+        return denied
     pipeline = get_pipeline()
     pipeline.stop()
     return jsonify({"success": True, "message": "Camera stopped"})
@@ -96,6 +122,9 @@ def stop_detection():
 @login_required
 @limiter.limit("30 per minute")
 def stop_face_recognition():
+    denied = _legacy_camera_guard()
+    if denied is not None:
+        return denied
     pipeline = get_pipeline()
     pipeline.stop()
     return jsonify({"success": True, "message": "Face recognition stopped"})
@@ -104,6 +133,9 @@ def stop_face_recognition():
 @recognition_bp.route("/get_video_feed")
 @login_required
 def video_feed():
+    denied = _legacy_camera_guard()
+    if denied is not None:
+        return denied
     pipeline = get_pipeline()
     if not pipeline.is_running:
         return jsonify({"success": False, "message": "Camera is not running"}), 409
@@ -119,6 +151,9 @@ def video_feed():
 @limiter.exempt
 def detected_faces():
     """Polled by the recognition UI a few times a second."""
+    denied = _legacy_camera_guard()
+    if denied is not None:
+        return denied
     pipeline = get_pipeline()
     return jsonify(
         {

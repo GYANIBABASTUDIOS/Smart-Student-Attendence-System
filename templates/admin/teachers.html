@@ -1,0 +1,79 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Teachers · Admin Panel{% endblock %}
+{% block page_heading %}Teacher Management{% endblock %}
+
+{% block content %}
+<section class="teacher-page-heading">
+    <div>
+        <p class="panel-eyebrow">ACADEMIC ADMINISTRATION</p>
+        <h2>Teachers</h2>
+        <p>Manage teacher accounts, departments, and class assignments.</p>
+    </div>
+    <a class="teacher-button primary" href="{{ url_for('admin.create_teacher') }}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Add Teacher</a>
+</section>
+
+<section class="teacher-directory panel-panel">
+    <div class="teacher-directory-heading">
+        <div><h2>Teacher directory</h2><p>{{ teacher_count }} result{% if teacher_count != 1 %}s{% endif %}</p></div>
+        <form class="teacher-filters" method="get" action="{{ url_for('admin.teachers') }}">
+            <label class="visually-hidden" for="teacher-search">Search teachers</label>
+            <input id="teacher-search" type="search" name="q" value="{{ search }}" placeholder="Search name, username, email, ID">
+            <label class="visually-hidden" for="teacher-status">Account status</label>
+            <select id="teacher-status" name="status">
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="all" {% if status == 'all' %}selected{% endif %}>All statuses</option>
+            </select>
+            <label class="visually-hidden" for="teacher-department">Department</label>
+            <select id="teacher-department" name="department_id">
+                <option value="">All departments</option>
+                {% for department in departments %}
+                <option value="{{ department.id }}" {% if department_id == department.id %}selected{% endif %}>{{ department.name }}</option>
+                {% endfor %}
+            </select>
+            <button class="teacher-button secondary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Apply</button>
+        </form>
+    </div>
+
+    {% if teachers %}
+    <div class="teacher-table-wrap">
+        <table class="teacher-table">
+            <thead><tr><th scope="col">Teacher</th><th scope="col">Username</th><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Assigned classes</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">Actions</th></tr></thead>
+            <tbody>
+                {% for teacher in teachers %}
+                {% set active = teacher.is_active and teacher.user.is_active %}
+                <tr>
+                    <td data-label="Teacher"><strong>{{ teacher.name }}</strong><small>{{ teacher.employee_id }}</small></td>
+                    <td data-label="Username">{{ teacher.user.username }}</td>
+                    <td data-label="Email">{{ teacher.user.email }}</td>
+                    <td data-label="Department">{{ teacher.department.name if teacher.department else 'Unassigned' }}</td>
+                    <td data-label="Assigned classes">
+                        {% set class_names = teacher.class_assignments|selectattr('is_active')|map(attribute='class_section.name')|list %}
+                        {{ class_names|join(', ') if class_names else 'Unassigned' }}
+                    </td>
+                    <td data-label="Status"><span class="teacher-status {{ 'active' if active else 'inactive' }}">{{ 'Active' if active else 'Inactive' }}</span></td>
+                    <td data-label="Created">{{ teacher.created_at|localtime('%b %d, %Y') }}</td>
+                    <td data-label="Actions" class="teacher-actions">
+                        <a class="teacher-icon-button" href="{{ url_for('admin.edit_teacher', teacher_id=teacher.id) }}" aria-label="Edit {{ teacher.name }}"><i class="fa-solid fa-pen" aria-hidden="true"></i><span>Edit</span></a>
+                        <form method="post" action="{{ url_for('admin.update_teacher_status', teacher_id=teacher.id) }}" {% if active %}onsubmit="return confirm('Deactivate this teacher? This will prevent the account from signing in.')"{% endif %}>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="active" value="{{ 'false' if active else 'true' }}">
+                            <button class="teacher-icon-button {{ 'danger' if active else 'enable' }}" type="submit">{% if active %}<i class="fa-solid fa-user-slash" aria-hidden="true"></i><span>Deactivate</span>{% else %}<i class="fa-solid fa-user-check" aria-hidden="true"></i><span>Activate</span>{% endif %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="teacher-empty">
+        <span><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></span>
+        <h3>{% if search or department_id or status == 'inactive' %}No matching teachers{% else %}No teachers yet{% endif %}</h3>
+        <p>{% if search or department_id or status == 'inactive' %}Try changing the search or filters.{% else %}Add a teacher to create their system account and profile.{% endif %}</p>
+        {% if not search and not department_id and status != 'inactive' %}<a class="teacher-button primary" href="{{ url_for('admin.create_teacher') }}">Add Teacher</a>{% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

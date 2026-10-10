@@ -1,0 +1,10 @@
+{% extends "student/base_student.html" %}
+{% block page_heading %}My Profile{% endblock %}
+{% block content %}
+<section class="panel-welcome"><div><p class="panel-eyebrow">PERSONAL INFORMATION</p><h2>Your profile</h2><p>Review your linked academic details and update your contact phone.</p></div></section>
+<section class="panel-panel student-profile-panel"><div class="panel-panel-heading"><div><h2>Account and academic details</h2><p>Your student identifier and class assignment are managed by school staff.</p></div></div>
+<dl class="student-identity-grid"><div><dt>Name</dt><dd>{{ student.name }}</dd></div><div><dt>Student identifier</dt><dd>{{ student.student_id }}</dd></div><div><dt>Email</dt><dd>{{ student.email }}</dd></div><div><dt>Department</dt><dd>{{ student.class_section.department.name if student.class_section else student.department or 'Not linked' }}</dd></div><div><dt>Year</dt><dd>{{ student.class_section.year if student.class_section else student.year or 'Not linked' }}</dd></div><div><dt>Section</dt><dd>{{ student.class_section.section if student.class_section else student.section or 'Not linked' }}</dd></div></dl>
+<form method="post" class="student-profile-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="phone">Contact phone</label><input id="phone" name="phone" type="tel" maxlength="15" value="{{ student.phone or '' }}" autocomplete="tel"><small>Leave blank to clear this optional field. School-managed identity and class fields cannot be edited here.</small><button type="submit" class="panel-button primary">Save phone</button></form>
+<div class="student-profile-form"><h3>Face recognition</h3><p>{% if student.has_face_enrolment %}Your face is registered for attendance recognition.{% else %}Register a face sample to support teacher-led attendance recognition.{% endif %}</p><a class="panel-button" href="{{ url_for('student.face_registration') }}">{{ 'View registration status' if student.has_face_enrolment else 'Register My Face' }}</a></div>
+</section>
+{% endblock %}

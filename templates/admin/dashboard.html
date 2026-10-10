@@ -1,0 +1,61 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Admin Dashboard · Smart Attendance{% endblock %}
+{% block page_heading %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<section class="panel-welcome" aria-label="Dashboard introduction">
+    <div>
+        <p class="panel-eyebrow">OVERVIEW · {{ reference_date.strftime('%A, %B %d, %Y') }}</p>
+        <h2>Welcome back, {{ current_user.username }}</h2>
+        <p>Here is the latest overview of your campus attendance.</p>
+    </div>
+</section>
+
+<section class="panel-metric-grid" aria-label="Campus summary">
+    <article class="panel-metric-card"><div class="metric-icon blue"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></div><p>Total students</p><strong>{{ total_students }}</strong><small>Student records</small></article>
+    <article class="panel-metric-card"><div class="metric-icon violet"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></div><p>Total teachers</p><strong>{{ total_teachers }}</strong><small>Teacher profiles</small></article>
+    <article class="panel-metric-card"><div class="metric-icon teal"><i class="fa-solid fa-building-columns" aria-hidden="true"></i></div><p>Departments</p><strong>{{ total_departments }}</strong><small>Academic departments</small></article>
+    <article class="panel-metric-card"><div class="metric-icon amber"><i class="fa-solid fa-door-open" aria-hidden="true"></i></div><p>Classes</p><strong>{{ total_classes }}</strong><small>Class sections</small></article>
+    <article class="panel-metric-card"><div class="metric-icon green"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div><p>Present today</p><strong>{{ present_today }}</strong><small>Includes late arrivals</small></article>
+    <article class="panel-metric-card"><div class="metric-icon red"><i class="fa-solid fa-user-xmark" aria-hidden="true"></i></div><p>Absent today</p><strong>{{ absent_today }}</strong><small>Recorded absent</small></article>
+    <article class="panel-metric-card"><div class="metric-icon blue"><i class="fa-solid fa-chart-simple" aria-hidden="true"></i></div><p>Overall attendance</p><strong>{{ attendance_rate }}<span>%</span></strong><small>Of active students today</small></article>
+</section>
+
+<section class="panel-panel-grid top-panels">
+    <article class="panel-panel">
+        <div class="panel-panel-heading"><div><h2>Attendance trends</h2><p>Daily attendance records for the last seven days</p></div><span class="panel-period">7 days</span></div>
+        {% if weekly_trend %}
+        <div class="panel-chart-wrap"><canvas id="weekly-attendance-chart" role="img" aria-label="Bar chart showing present and absent attendance for the last seven days"></canvas></div>
+        <script id="weekly-attendance-data" type="application/json">{{ weekly_trend|tojson }}</script>
+        <p class="chart-note">Present includes late arrivals. Days with no records show zero.</p>
+        {% else %}<div class="panel-empty compact"><span><i class="fa-solid fa-chart-column" aria-hidden="true"></i></span><strong>No attendance data yet</strong><p>The weekly chart will appear when attendance is recorded.</p></div>{% endif %}
+    </article>
+
+    <article class="panel-panel">
+        <div class="panel-panel-heading"><div><h2>Department attendance</h2><p>Attendance rate by department</p></div><a class="panel-link" href="{{ url_for('admin.reports') }}">Reports <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
+        {% if department_attendance %}
+        <div class="department-list">
+            {% for department in department_attendance %}
+            <div class="department-row">
+                <div class="department-row-top"><strong>{{ department.name }}</strong><span>{{ department.rate }}%</span></div>
+                <div class="department-track" role="progressbar" aria-label="{{ department.name }} attendance rate" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ department.rate }}"><span style="width: {{ department.rate }}%"></span></div>
+                <small>{{ department.students }} student{% if department.students != 1 %}s{% endif %} · {{ department.present_days }} present days this week</small>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}<div class="panel-empty compact"><span><i class="fa-solid fa-building-columns" aria-hidden="true"></i></span><strong>No departments to report yet</strong><p>Department attendance will appear when student records are assigned.</p></div>{% endif %}
+    </article>
+</section>
+
+<section class="panel-quick-actions" aria-label="Quick actions">
+    <div><span class="panel-eyebrow">QUICK ACTIONS</span><h2>Common tasks</h2></div>
+    <a href="{{ url_for('admin.create_teacher') }}"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span><strong>Add Teacher</strong><small>Create a teacher account</small></span><i class="fa-solid fa-arrow-right action-arrow" aria-hidden="true"></i></a>
+    <a href="{{ url_for('admin.teachers') }}"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i><span><strong>Manage Teachers</strong><small>View and update teacher accounts</small></span><i class="fa-solid fa-arrow-right action-arrow" aria-hidden="true"></i></a>
+    <a href="{{ url_for('admin.reports') }}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i><span><strong>View Reports</strong><small>Review overall attendance analytics</small></span><i class="fa-solid fa-arrow-right action-arrow" aria-hidden="true"></i></a>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

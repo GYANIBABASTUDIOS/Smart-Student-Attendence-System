@@ -63,7 +63,9 @@ Core goals:
 * ✅ Automatic marking behind consecutive-frame confirmation, a match-margin test and a
   per-student cooldown
 * ✅ Unknown faces reported as unknown instead of matched to the nearest student
-* ✅ Admin / teacher accounts, hashed passwords, role-restricted destructive actions
+* ✅ Separate Admin, Teacher, and Student panels with a shared responsive design system
+* ✅ Role-based access control and linked active Teacher / Student profiles
+* ✅ Hashed passwords and role-restricted management actions
 * ✅ Manual marking, bulk marking, and leave requests that feed back into attendance
 * ✅ Analytics dashboard served by aggregate SQL (constant queries, not one per student)
 * ✅ CSV / Excel export, streamed from memory and row-capped
@@ -100,13 +102,15 @@ attendance-system/
 │   ├── extensions.py         db, migrate, csrf, limiter, login_manager
 │   ├── errors.py             content-negotiated error responses
 │   ├── cli.py                create-admin, create-user, rebuild-faces, ...
-│   ├── models/               user, student, attendance, leave
-│   ├── blueprints/           auth, dashboard, students, attendance, leave,
-│   │                         recognition, api
-│   ├── services/             student, attendance, leave, analytics, export
+│   ├── models/               users, students, teachers, academic structure,
+│   │                         attendance, leave
+│   ├── blueprints/           auth, admin, teacher, student, dashboard,
+│   │                         legacy student/attendance/leave, recognition, api
+│   ├── services/             student, teacher, admin, attendance, leave,
+│   │                         analytics, export
 │   ├── recognition/          camera, detector, recognizer, enrolment, pipeline
 │   └── utils/                validators, security, images, logging, time
-├── migrations/               Alembic revisions (baseline → dedupe → auth)
+├── migrations/               Alembic revisions 0001-0004 (including roles/structure)
 ├── models/                   res10 SSD detector files (tracked in git)
 ├── templates/  static/
 ├── tests/                    unit/ and integration/, plus conftest fixtures
@@ -133,15 +137,15 @@ attendance-system/
 ### Clone and install
 
 ```bash
-git clone https://github.com/your-username/attendance-system.git
-cd attendance-system
+git clone https://github.com/drexvane/smart-attendance-system.git
+cd smart-attendance-system
 
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate        # Windows PowerShell: .venv\Scripts\Activate.ps1
 
-pip install -e ".[dev]"          # runtime + test/lint tooling
+python -m pip install -e ".[dev]" # runtime + test/lint tooling
 # or, runtime only:
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 The detector's model files are tracked in `models/`, so a normal clone already has them.
@@ -157,17 +161,32 @@ Without them the detector silently falls back to a Haar cascade, which is notice
 
 ## 🏁 First Run
 
+macOS / Linux:
+
 ```bash
 cp .env.example .env
-python -c "import secrets; print(secrets.token_hex(32))"   # paste into SECRET_KEY
-
-export FLASK_APP=wsgi.py                 # Windows: set FLASK_APP=wsgi.py
-flask db upgrade                         # create/upgrade the schema
-flask create-admin                       # prompts for username, email, password
-flask run
+python -c "import secrets; print(secrets.token_hex(32))"  # paste into SECRET_KEY
+export FLASK_APP=wsgi.py
+python -m flask db upgrade
+python -m flask create-admin
+python -m flask run
 ```
 
-Then open `http://localhost:5000` — it redirects to `/login`.
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+$env:SECRET_KEY = (python -c "import secrets; print(secrets.token_hex(32))")
+$env:FLASK_APP = "wsgi.py"
+python -m flask db upgrade
+python -m flask create-admin
+python -m flask run
+```
+
+Open `http://localhost:5000`. Anonymous visitors are sent to `/login`; after login,
+Admin, Teacher, and Student accounts land on `/admin/`, `/teacher/`, and `/student/`
+respectively. A Student account must be linked to an active Student record through its
+`students.user_id` field to use the Student Panel.
 
 **There are no default credentials.** A fresh install has no usable account until
 `flask create-admin` is run, and the password is prompted for rather than passed as an
@@ -215,6 +234,21 @@ routes, which put late-evening marks on the wrong day.
 ---
 
 ## 🧪 Usage
+
+### Role panels
+
+* **Admin** — `/admin/` for teacher and academic-structure management, reports, and
+  account settings placeholders. Individual student management is not linked from this
+  panel; legacy student-management URLs remain for compatibility with existing workflows.
+* **Teacher** — `/teacher/` for assigned classes, scoped student management, attendance,
+  and class-bound face-recognition attendance.
+* **Student** — `/student/` for the linked student's own profile, attendance history, and
+  leave requests. The Student Panel does not permit changes to identifiers, class
+  assignment, attendance, or leave decisions.
+
+The panels share the same shell, typography, colors, controls, and responsive design
+system. Teacher reports and leave navigation and Admin settings are marked as forthcoming
+where a panel-specific workflow is not implemented.
 
 ### Automatic mode
 
@@ -380,8 +414,8 @@ history is untouched.
 
 Implemented:
 
-* Session authentication, password hashing (Werkzeug PBKDF2), `admin` / `teacher` roles,
-  and role checks on destructive actions such as permanent deletion.
+* Session authentication, password hashing (Werkzeug PBKDF2), `admin` / `teacher` /
+  `student` roles, and role checks on panel and management routes.
 * `@login_required` on every mutating route, both export routes and the student-PII APIs.
 * CSRF protection on all state-changing requests, including the recognition control
   endpoints — those used to be `@csrf_exempt`. Browser JS sends the token as
@@ -402,6 +436,9 @@ Known limitations, stated rather than buried:
   frontend refactor, not a header change.
 * Face samples and the LBPH model are stored unencrypted on disk. Protect the volume.
 * No audit log of who changed which record beyond `marked_by`.
+* Student accounts can be created with `create-user --role student`, but must also be
+  linked to an active Student row before panel access. There is no dedicated in-panel
+  student-account provisioning workflow yet.
 
 ⚠️ **Ethical note**: biometric attendance needs informed consent, a retention policy, and
 a way for a student to be removed. Deploy accordingly, and check your local data-protection
@@ -420,8 +457,10 @@ Found a vulnerability? Don't open a public issue — see `SECURITY.md`.
 * 📷 Multi-camera support
 * 🧾 Full audit log
 * 📱 Mobile / kiosk client
-* 🎨 Template and CSS consolidation — `templates/` still holds three parallel design
-  systems; only the `*_clean.html` set is reachable
+* 🎨 Consolidate legacy templates and stylesheets. The Admin, Teacher, and Student
+  panels share `templates/shared/panel_base.html` and
+  `static/css/panel-design-system.css`; older templates remain for supported legacy
+  attendance and student workflows.
 
 ---
 

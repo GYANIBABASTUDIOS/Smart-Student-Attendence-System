@@ -39,6 +39,9 @@ class AttendanceRecord(db.Model):
     # column never existed, so exports always said "System" and one route crashed
     # trying to set it.
     marked_by = db.Column(db.String(64), nullable=False, default="System")
+    marked_by_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     notes = db.Column(db.String(255))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(
@@ -46,6 +49,9 @@ class AttendanceRecord(db.Model):
     )
 
     student = db.relationship("Student", back_populates="attendance_records")
+    marked_by_user = db.relationship(
+        "User", back_populates="attendance_marks", foreign_keys=[marked_by_user_id]
+    )
 
     def to_dict(self) -> dict:
         return {

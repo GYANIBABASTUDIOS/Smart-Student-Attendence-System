@@ -8,6 +8,9 @@ from app.utils.time import utcnow
 
 class Student(db.Model):
     __tablename__ = "students"
+    __table_args__ = (
+        db.Index("uq_students_user_id", "user_id", unique=True),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     # UNIQUE already creates a backing index on both SQLite and Postgres, so no
@@ -20,6 +23,12 @@ class Student(db.Model):
     year = db.Column(db.String(10), index=True)
     section = db.Column(db.String(5))
     image_path = db.Column(db.String(255))
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL")
+    )
+    class_section_id = db.Column(
+        db.Integer, db.ForeignKey("class_sections.id", ondelete="SET NULL"), index=True
+    )
 
     # --- face enrolment ----------------------------------------------------------
     # The LBPH recognizer works on integer labels, not on blobs stored per row, so
@@ -56,6 +65,8 @@ class Student(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    user = db.relationship("User", back_populates="student_profile", foreign_keys=[user_id])
+    class_section = db.relationship("ClassSection", back_populates="students")
 
     @property
     def has_face_enrolment(self) -> bool:

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}{{ panel_name }} Panel &middot; Smart Attendance{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/modern-saas.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/panel-design-system.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="panel-body">
+    <div class="panel-shell">
+        <button class="panel-sidebar-scrim" id="panel-sidebar-scrim" aria-label="Close navigation" hidden></button>
+        <aside class="panel-sidebar" id="panel-sidebar" aria-label="{{ panel_name }} navigation">
+            <a class="panel-brand" href="{% block home_url %}#{% endblock %}">
+                <span class="panel-brand-mark"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i></span>
+                <span><strong>Campus</strong><small>{{ panel_name|upper }} PANEL</small></span>
+            </a>
+
+            <div class="panel-nav-label">WORKSPACE</div>
+            <nav class="panel-nav" aria-label="Workspace">
+                {% block primary_navigation %}{% endblock %}
+            </nav>
+
+            <div class="panel-sidebar-user">
+                <span class="panel-avatar" aria-hidden="true">{{ current_user.username[:1]|upper }}</span>
+                <span class="panel-user-copy"><strong>{{ current_user.username }}</strong><small>{{ panel_name }}</small></span>
+                <i class="fa-solid fa-shield-halved panel-user-shield" aria-hidden="true"></i>
+            </div>
+            <form class="panel-sidebar-logout" method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="panel-nav-link panel-logout" type="submit"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Logout</span></button>
+            </form>
+        </aside>
+
+        <div class="panel-workspace">
+            <header class="panel-topbar">
+                <button class="panel-menu-toggle" id="panel-menu-toggle" aria-label="Open navigation" aria-controls="panel-sidebar" aria-expanded="false">
+                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                </button>
+                <div class="panel-topbar-heading">
+                    <span class="panel-eyebrow">SMART ATTENDANCE SYSTEM</span>
+                    <h1>{% block page_heading %}{{ panel_name }}{% endblock %}</h1>
+                </div>
+                <div class="panel-topbar-identity">
+                    <span class="panel-avatar small" aria-hidden="true">{{ current_user.username[:1]|upper }}</span>
+                    <span><strong>{{ current_user.username }}</strong><small>{{ panel_name }}</small></span>
+                </div>
+            </header>
+
+            <main class="panel-content" id="main-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}<div class="panel-flashes" role="status">{% for category, message in messages %}<div class="panel-flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/panel-shell.js') }}" defer></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

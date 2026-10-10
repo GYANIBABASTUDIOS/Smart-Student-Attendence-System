@@ -1,0 +1,20 @@
+{% extends "shared/panel_base.html" %}
+{% set panel_name = "Teacher" %}
+
+{% block title %}Teacher Panel &middot; Smart Attendance{% endblock %}
+{% block home_url %}{{ url_for('teacher.index') }}{% endblock %}
+{% block page_heading %}Teacher Dashboard{% endblock %}
+
+{% block primary_navigation %}
+    <a class="panel-nav-link {% if request.endpoint == 'teacher.index' %}active{% endif %}" href="{{ url_for('teacher.index') }}" {% if request.endpoint == 'teacher.index' %}aria-current="page"{% endif %}>
+        <i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span>
+    </a>
+    <a class="panel-nav-link {% if request.endpoint in ['teacher.attendance', 'teacher.mark_class_student_attendance', 'teacher.start_class_recognition', 'teacher.stop_class_recognition', 'teacher.class_recognition_faces', 'teacher.class_recognition_feed', 'teacher.mark_class_confirmations'] %}active{% endif %}" href="{{ url_for('teacher.attendance') }}" {% if request.endpoint and request.endpoint.startswith('teacher.') and 'attendance' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i><span>Attendance</span></a>
+    <a class="panel-nav-link {% if request.endpoint in ['teacher.students', 'teacher.create_student', 'teacher.edit_student'] %}active{% endif %}" href="{{ url_for('teacher.students') }}" {% if request.endpoint in ['teacher.students', 'teacher.create_student', 'teacher.edit_student'] %}aria-current="page"{% endif %}><i class="fa-solid fa-users" aria-hidden="true"></i><span>My Students</span></a>
+    <span class="panel-nav-link disabled" aria-disabled="true"><i class="fa-solid fa-chart-line" aria-hidden="true"></i><span>Reports</span><small>Soon</small></span>
+    <span class="panel-nav-link disabled" aria-disabled="true"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><span>Leave Requests</span><small>Soon</small></span>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

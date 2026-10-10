@@ -1,0 +1,60 @@
+{% extends "teacher/base_teacher.html" %}
+
+{% block title %}Attendance · Teacher Panel{% endblock %}
+{% block page_heading %}Class Attendance{% endblock %}
+
+{% block content %}
+<section class="panel-welcome" aria-label="Teacher attendance introduction">
+    <div><p class="panel-eyebrow">TEACHER WORKSPACE</p><h2>Class Attendance</h2><p>Choose an active assigned class to mark today's roster or review recent records.</p></div>
+</section>
+
+<section class="panel-panel teacher-attendance-selector" aria-label="Class and date selection">
+    <form method="get" action="{{ url_for('teacher.attendance') }}" class="teacher-attendance-select-form">
+        <label for="attendance-class">Assigned class</label>
+        <select id="attendance-class" name="class_section_id" required>
+            <option value="">Choose an assigned class</option>
+            {% for class_section in classes %}
+            <option value="{{ class_section.id }}" {% if current_class_id == class_section.id %}selected{% endif %}>{{ class_section.department.name }} · {{ class_section.name }} · {{ class_section.year }}/{{ class_section.section }}</option>
+            {% endfor %}
+        </select>
+        <label for="attendance-date">Attendance date</label>
+        <input id="attendance-date" name="date" type="date" value="{{ selected_date }}" max="{{ today }}" required>
+        <button class="panel-button primary" type="submit">View roster</button>
+    </form>
+    {% if not classes %}<div class="teacher-dashboard-empty compact"><h3>No active class assignments</h3><p>An administrator must assign an active class section before you can manage attendance.</p></div>{% endif %}
+</section>
+
+{% if current_class_id %}
+<section class="panel-panel teacher-attendance-roster" aria-labelledby="attendance-roster-title">
+    <div class="panel-panel-heading">
+        <div><h2 id="attendance-roster-title">Roster for {{ selected_date }}</h2><p>Daily attendance is recorded once per student. Repeat submissions keep the original record unchanged.</p></div>
+        {% if selected_date == today %}<button class="panel-button primary" id="recognition-start" type="button" data-start-url="{{ url_for('teacher.start_class_recognition') }}" data-stop-url="{{ url_for('teacher.stop_class_recognition') }}" data-face-url="{{ url_for('teacher.class_recognition_faces') }}" data-mark-url="{{ url_for('teacher.mark_class_confirmations') }}" data-feed-url="{{ url_for('teacher.class_recognition_feed') }}" data-class-id="{{ current_class_id }}" data-csrf="{{ csrf_token() }}">Start face recognition</button>{% endif %}
+    </div>
+    {% if selected_date == today %}
+    <div class="teacher-recognition-panel" id="teacher-recognition-panel" data-running="{{ 'true' if recognition_active else 'false' }}">
+        <div class="teacher-recognition-video"><img id="teacher-recognition-video" alt="Live face-recognition camera feed" hidden><p id="teacher-recognition-placeholder">Camera is stopped. Start recognition to use enrolled faces for this assigned class.</p></div>
+        <div class="teacher-recognition-output"><p id="teacher-recognition-message" role="status">Recognition is class-scoped; unknown or unmapped faces are never marked.</p><ul id="teacher-recognition-faces" aria-live="polite"></ul></div>
+    </div>
+    {% endif %}
+    {% if students %}
+    <div class="teacher-student-table-wrap"><table class="teacher-student-table teacher-attendance-table"><caption class="visually-hidden">Attendance roster for {{ selected_date }}</caption><thead><tr><th scope="col">Student</th><th scope="col">Identifier</th><th scope="col">Status</th><th scope="col">Mark</th></tr></thead><tbody>
+    {% for student in students %}{% set existing = records_by_student.get(student.id) %}<tr><th scope="row">{{ student.name }}</th><td>{{ student.student_id }}</td><td>{% if existing %}<span class="teacher-student-status">{{ existing.status }}</span>{% else %}<span class="teacher-attendance-unmarked">Not marked</span>{% endif %}</td><td>
+        {% if existing %}<span class="teacher-attendance-recorded">Recorded at {{ existing.time_in|localtime('%I:%M %p') if existing.time_in else '—' }}</span>
+        {% else %}<form method="post" action="{{ url_for('teacher.mark_class_student_attendance', class_section_id=current_class_id, student_id=student.id) }}" class="teacher-attendance-mark-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="date" value="{{ selected_date }}"><label class="visually-hidden" for="status-{{ student.id }}">Status for {{ student.name }}</label><select id="status-{{ student.id }}" name="status" required>{% for status in statuses %}<option value="{{ status }}" {% if status == 'Present' %}selected{% endif %}>{{ status }}</option>{% endfor %}</select><button class="teacher-student-action" type="submit">Mark</button></form>{% endif %}
+    </td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="teacher-dashboard-empty compact"><h3>No active students in this class</h3><p>Students currently linked to the selected assigned section will appear here.</p></div>{% endif %}
+</section>
+
+<section class="panel-panel teacher-attendance-history" aria-labelledby="attendance-history-title">
+    <div class="panel-panel-heading"><div><h2 id="attendance-history-title">Recent attendance history</h2><p>Up to 100 records from the last 90 days for students currently linked to this class. Historical class assignments are not stored.</p></div></div>
+    {% if history %}<div class="teacher-student-table-wrap"><table class="teacher-student-table"><caption class="visually-hidden">Recent attendance history for the selected class</caption><thead><tr><th scope="col">Date</th><th scope="col">Student</th><th scope="col">Identifier</th><th scope="col">Status</th><th scope="col">Marked by</th><th scope="col">Time</th></tr></thead><tbody>
+        {% for record in history %}<tr><td>{{ record.date }}</td><th scope="row">{{ record.student.name if record.student else 'Unknown student' }}</th><td>{{ record.student.student_id if record.student else '—' }}</td><td>{{ record.status }}</td><td>{{ record.marked_by }}</td><td>{{ record.time_in|localtime('%I:%M %p') if record.time_in else '—' }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="teacher-dashboard-empty compact"><h3>No attendance history</h3><p>Attendance records for this class will appear here.</p></div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if current_class_id and selected_date == today %}<script src="{{ url_for('static', filename='js/teacher-attendance.js') }}" defer></script>{% endif %}
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ heading }} · Admin Panel{% endblock %}
+{% block page_heading %}{{ heading }}{% endblock %}
+
+{% block content %}
+<section class="teacher-page-heading">
+    <div>
+        <p class="panel-eyebrow"><a href="{{ url_for('admin.teachers') }}">TEACHERS</a> / {{ heading|upper }}</p>
+        <h2>{{ heading }}</h2>
+        <p>{% if teacher %}Update the teacher profile, login details, and assignments.{% else %}Create a teacher profile and secure login account.{% endif %}</p>
+    </div>
+    {% if teacher %}<span class="teacher-status {{ 'active' if teacher.is_active and teacher.user.is_active else 'inactive' }}">{{ 'Active' if teacher.is_active and teacher.user.is_active else 'Inactive' }}</span>{% endif %}
+</section>
+
+<form class="teacher-form panel-panel" method="post" action="{% if teacher %}{{ url_for('admin.edit_teacher', teacher_id=teacher.id) }}{% else %}{{ url_for('admin.create_teacher') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors.get('form') %}<div class="teacher-form-error" role="alert">{{ errors.form }}</div>{% endif %}
+
+    <section class="teacher-form-section">
+        <div class="teacher-form-section-heading"><h3>Profile details</h3><p>Teacher identity and department assignment.</p></div>
+        <div class="teacher-form-grid">
+            <div class="teacher-field {% if errors.get('name') %}has-error{% endif %}">
+                <label for="name">Full name <span aria-hidden="true">*</span></label>
+                <input id="name" name="name" type="text" maxlength="100" required value="{{ values.get('name', '') }}" autocomplete="name">
+                {% if errors.get('name') %}<small class="field-error">{{ errors.name }}</small>{% endif %}
+            </div>
+            <div class="teacher-field {% if errors.get('employee_id') %}has-error{% endif %}">
+                <label for="employee_id">Employee ID <span aria-hidden="true">*</span></label>
+                <input id="employee_id" name="employee_id" type="text" maxlength="32" required value="{{ values.get('employee_id', '') }}">
+                {% if errors.get('employee_id') %}<small class="field-error">{{ errors.employee_id }}</small>{% endif %}
+            </div>
+            <div class="teacher-field {% if errors.get('phone') %}has-error{% endif %}">
+                <label for="phone">Phone</label>
+                <input id="phone" name="phone" type="tel" maxlength="15" value="{{ values.get('phone', '') }}" autocomplete="tel">
+                {% if errors.get('phone') %}<small class="field-error">{{ errors.phone }}</small>{% endif %}
+            </div>
+            <div class="teacher-field {% if errors.get('department_id') %}has-error{% endif %}">
+                <label for="department_id">Department</label>
+                <select id="department_id" name="department_id">
+                    <option value="">Unassigned</option>
+                    {% for department in departments %}
+                    <option value="{{ department.id }}" {% if values.get('department_id', '')|string == department.id|string %}selected{% endif %}>{{ department.name }}{% if not department.is_active %} (Inactive){% endif %}</option>
+                    {% endfor %}
+                </select>
+                {% if not departments %}<small>Department assignment is unavailable until departments are set up.</small>{% endif %}
+                {% if errors.get('department_id') %}<small class="field-error">{{ errors.department_id }}</small>{% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="teacher-form-section">
+        <div class="teacher-form-section-heading"><h3>Login account</h3><p>The teacher will sign in with this username and password.</p></div>
+        <div class="teacher-form-grid">
+            <div class="teacher-field {% if errors.get('username') %}has-error{% endif %}">
+                <label for="username">Username <span aria-hidden="true">*</span></label>
+                <input id="username" name="username" type="text" maxlength="64" required value="{{ values.get('username', '') }}" autocomplete="username">
+                {% if errors.get('username') %}<small class="field-error">{{ errors.username }}</small>{% endif %}
+            </div>
+            <div class="teacher-field {% if errors.get('email') %}has-error{% endif %}">
+                <label for="email">Email <span aria-hidden="true">*</span></label>
+                <input id="email" name="email" type="email" maxlength="120" required value="{{ values.get('email', '') }}" autocomplete="email">
+                {% if errors.get('email') %}<small class="field-error">{{ errors.email }}</small>{% endif %}
+            </div>
+            <div class="teacher-field {% if errors.get('password') %}has-error{% endif %}">
+                <label for="password">{% if teacher %}New password{% else %}Password <span aria-hidden="true">*</span>{% endif %}</label>
+                <input id="password" name="password" type="password" minlength="12" {% if not teacher %}required{% endif %} autocomplete="new-password">
+                <small>{% if teacher %}Leave blank to keep the current password.{% else %}At least 12 characters.{% endif %}</small>
+                {% if errors.get('password') %}<small class="field-error">{{ errors.password }}</small>{% endif %}
+            </div>
+            <div class="teacher-field {% if errors.get('password_confirmation') %}has-error{% endif %}">
+                <label for="password_confirmation">{% if teacher %}Confirm new password{% else %}Confirm password <span aria-hidden="true">*</span>{% endif %}</label>
+                <input id="password_confirmation" name="password_confirmation" type="password" minlength="12" {% if not teacher %}required{% endif %} autocomplete="new-password">
+                {% if errors.get('password_confirmation') %}<small class="field-error">{{ errors.password_confirmation }}</small>{% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="teacher-form-section">
+        <div class="teacher-form-section-heading"><h3>Class assignments</h3><p>Assign from existing active class sections. Class setup remains in the future Class Management module.</p></div>
+        {% if classes %}
+        <div class="teacher-class-options">
+            {% for class_section in classes %}
+            <label class="teacher-class-option"><input type="checkbox" name="class_ids" value="{{ class_section.id }}" {% if class_section.id in selected_class_ids %}checked{% endif %}><span><strong>{{ class_section.name }}</strong><small>{{ class_section.department.name }} · Year {{ class_section.year }} · Section {{ class_section.section }}</small></span></label>
+            {% endfor %}
+        </div>
+        {% else %}<div class="teacher-coming-soon"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Class assignments will be available when class sections are configured.</div>{% endif %}
+        {% if errors.get('class_ids') %}<small class="field-error">{{ errors.class_ids }}</small>{% endif %}
+    </section>
+
+    <footer class="teacher-form-actions">
+        <a class="teacher-button secondary" href="{{ url_for('admin.teachers') }}">Cancel</a>
+        <button class="teacher-button primary" type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ 'Save changes' if teacher else 'Create Teacher' }}</button>
+    </footer>
+</form>
+{% endblock %}

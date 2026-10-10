@@ -1,0 +1,21 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ heading }} · Admin Panel{% endblock %}
+{% block page_heading %}{{ heading }}{% endblock %}
+
+{% block content %}
+<section class="structure-page-heading"><div><p class="panel-eyebrow"><a href="{{ url_for('admin.departments') }}">DEPARTMENTS</a> / {{ heading|upper }}</p><h2>{{ heading }}</h2><p>Department information used by teacher profiles and class sections.</p></div></section>
+<form class="teacher-form panel-panel" method="post" action="{% if department %}{{ url_for('admin.edit_department', department_id=department.id) }}{% else %}{{ url_for('admin.create_department') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors.get('form') %}<div class="teacher-form-error" role="alert">{{ errors.form }}</div>{% endif %}
+    <section class="teacher-form-section">
+        <div class="teacher-form-section-heading"><h3>Department details</h3><p>Name and unique department code.</p></div>
+        <div class="teacher-form-grid">
+            <div class="teacher-field {% if errors.get('name') %}has-error{% endif %}"><label for="name">Department name <span aria-hidden="true">*</span></label><input id="name" name="name" type="text" maxlength="100" required value="{{ values.get('name', '') }}">{% if errors.get('name') %}<small class="field-error">{{ errors.name }}</small>{% endif %}</div>
+            <div class="teacher-field {% if errors.get('code') %}has-error{% endif %}"><label for="code">Department code <span aria-hidden="true">*</span></label><input id="code" name="code" type="text" maxlength="20" required value="{{ values.get('code', '') }}" autocapitalize="characters"><small>Letters, numbers, hyphens, and underscores; saved in uppercase.</small>{% if errors.get('code') %}<small class="field-error">{{ errors.code }}</small>{% endif %}</div>
+            <div class="teacher-field structure-description {% if errors.get('description') %}has-error{% endif %}"><label for="description">Description</label><textarea id="description" name="description" rows="4">{{ values.get('description', '') }}</textarea>{% if errors.get('description') %}<small class="field-error">{{ errors.description }}</small>{% endif %}</div>
+        </div>
+    </section>
+    <footer class="teacher-form-actions"><a class="teacher-button secondary" href="{{ url_for('admin.departments') }}">Cancel</a><button class="teacher-button primary" type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ 'Save changes' if department else 'Create Department' }}</button></footer>
+</form>
+{% endblock %}

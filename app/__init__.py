@@ -107,16 +107,22 @@ def _init_extensions(app: Flask) -> None:
 
 
 def _register_blueprints(app: Flask) -> None:
+    from app.blueprints.admin import admin_bp
     from app.blueprints.api import api_bp
     from app.blueprints.attendance import attendance_bp
     from app.blueprints.auth import auth_bp
     from app.blueprints.dashboard import dashboard_bp
     from app.blueprints.leave import leave_bp
     from app.blueprints.recognition import recognition_bp
+    from app.blueprints.student import student_bp
     from app.blueprints.students import students_bp
+    from app.blueprints.teacher import teacher_bp
 
     for blueprint in (
         auth_bp,
+        admin_bp,
+        teacher_bp,
+        student_bp,
         dashboard_bp,
         students_bp,
         attendance_bp,

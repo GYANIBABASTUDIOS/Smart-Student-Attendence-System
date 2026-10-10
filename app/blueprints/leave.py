@@ -18,6 +18,7 @@ leave_bp = Blueprint("leave", __name__)
 
 @leave_bp.route("/leave")
 @login_required
+@roles_required("admin", "teacher")
 def index():
     status = request.args.get("status", "")
     leave_type = request.args.get("leave_type", "")
@@ -58,6 +59,7 @@ def index():
 
 @leave_bp.route("/apply_leave", methods=["POST"])
 @login_required
+@roles_required("admin", "teacher")
 @limiter.limit("20 per minute")
 def apply():
     data = {

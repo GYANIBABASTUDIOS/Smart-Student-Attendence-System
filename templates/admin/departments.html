@@ -1,0 +1,51 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Departments · Admin Panel{% endblock %}
+{% block page_heading %}Department Management{% endblock %}
+
+{% block content %}
+<section class="structure-page-heading">
+    <div><p class="panel-eyebrow">ACADEMIC ADMINISTRATION</p><h2>Departments</h2><p>Organize academic departments and view their associated teachers and classes.</p></div>
+    <a class="teacher-button primary" href="{{ url_for('admin.create_department') }}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Add Department</a>
+</section>
+
+<section class="structure-directory panel-panel">
+    <div class="structure-directory-heading">
+        <div><h2>Department directory</h2><p>{{ departments|length }} result{% if departments|length != 1 %}s{% endif %}</p></div>
+        <form class="teacher-filters" method="get" action="{{ url_for('admin.departments') }}">
+            <label class="visually-hidden" for="department-search">Search departments</label>
+            <input id="department-search" type="search" name="q" value="{{ search }}" placeholder="Search name or code">
+            <label class="visually-hidden" for="department-status">Department status</label>
+            <select id="department-status" name="status"><option value="active" {% if status == 'active' %}selected{% endif %}>Active</option><option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option><option value="all" {% if status == 'all' %}selected{% endif %}>All statuses</option></select>
+            <button class="teacher-button secondary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Apply</button>
+        </form>
+    </div>
+    {% if departments %}
+    <div class="teacher-table-wrap">
+        <table class="teacher-table structure-table">
+            <thead><tr><th scope="col">Department</th><th scope="col">Code</th><th scope="col">Teachers</th><th scope="col">Classes</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+            <tbody>
+                {% for department in departments %}
+                <tr>
+                    <td data-label="Department"><strong>{{ department.name }}</strong>{% if department.description %}<small>{{ department.description }}</small>{% endif %}</td>
+                    <td data-label="Code">{{ department.code }}</td>
+                    <td data-label="Teachers">{{ teacher_counts.get(department.id, 0) }}</td>
+                    <td data-label="Classes">{{ class_counts.get(department.id, 0) }}</td>
+                    <td data-label="Status"><span class="teacher-status {{ 'active' if department.is_active else 'inactive' }}">{{ 'Active' if department.is_active else 'Inactive' }}</span></td>
+                    <td data-label="Actions" class="teacher-actions">
+                        <a class="teacher-icon-button" href="{{ url_for('admin.edit_department', department_id=department.id) }}" aria-label="Edit {{ department.name }}"><i class="fa-solid fa-pen" aria-hidden="true"></i><span>Edit</span></a>
+                        <form method="post" action="{{ url_for('admin.update_department_status', department_id=department.id) }}" {% if department.is_active %}onsubmit="return confirm('Deactivate this department? Existing teacher and class links will be retained.')"{% endif %}>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="active" value="{{ 'false' if department.is_active else 'true' }}">
+                            <button class="teacher-icon-button {{ 'danger' if department.is_active else 'enable' }}" type="submit">{% if department.is_active %}<i class="fa-solid fa-ban" aria-hidden="true"></i><span>Deactivate</span>{% else %}<i class="fa-solid fa-check" aria-hidden="true"></i><span>Activate</span>{% endif %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="teacher-empty"><span><i class="fa-solid fa-building-columns" aria-hidden="true"></i></span><h3>{% if search or status == 'inactive' %}No matching departments{% else %}No departments yet{% endif %}</h3><p>{% if search or status == 'inactive' %}Try changing the search or status filter.{% else %}Add a department to organize classes and teacher profiles.{% endif %}</p>{% if not search and status != 'inactive' %}<a class="teacher-button primary" href="{{ url_for('admin.create_department') }}">Add Department</a>{% endif %}</div>
+    {% endif %}
+</section>
+{% endblock %}

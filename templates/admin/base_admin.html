@@ -1,0 +1,17 @@
+{% extends "shared/panel_base.html" %}
+{% set panel_name = "Admin" %}
+
+{% block title %}Admin Dashboard &middot; Smart Attendance{% endblock %}
+{% block home_url %}{{ url_for('admin.index') }}{% endblock %}
+{% block page_heading %}Admin Dashboard{% endblock %}
+
+{% block primary_navigation %}
+    <a class="panel-nav-link {% if request.endpoint == 'admin.index' %}active{% endif %}" href="{{ url_for('admin.index') }}" {% if request.endpoint == 'admin.index' %}aria-current="page"{% endif %}>
+        <i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span>
+    </a>
+    <a class="panel-nav-link {% if request.endpoint.startswith('admin.teacher') %}active{% endif %}" href="{{ url_for('admin.teachers') }}" {% if request.endpoint.startswith('admin.teacher') %}aria-current="page"{% endif %}><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i><span>Teachers</span></a>
+    <a class="panel-nav-link {% if request.endpoint.startswith('admin.department') %}active{% endif %}" href="{{ url_for('admin.departments') }}" {% if request.endpoint.startswith('admin.department') %}aria-current="page"{% endif %}><i class="fa-solid fa-building-columns" aria-hidden="true"></i><span>Departments</span></a>
+    <a class="panel-nav-link {% if request.endpoint.startswith('admin.class') %}active{% endif %}" href="{{ url_for('admin.classes') }}" {% if request.endpoint.startswith('admin.class') %}aria-current="page"{% endif %}><i class="fa-solid fa-door-open" aria-hidden="true"></i><span>Classes &amp; Sections</span></a>
+    <a class="panel-nav-link {% if request.endpoint == 'admin.reports' %}active{% endif %}" href="{{ url_for('admin.reports') }}" {% if request.endpoint == 'admin.reports' %}aria-current="page"{% endif %}><i class="fa-solid fa-chart-line" aria-hidden="true"></i><span>Reports &amp; Analytics</span></a>
+    <span class="panel-nav-link disabled" aria-disabled="true"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Settings</span><small>Soon</small></span>
+{% endblock %}

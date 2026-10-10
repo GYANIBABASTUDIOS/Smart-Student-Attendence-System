@@ -14,7 +14,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db, limiter
-from app.models import User
+from app.models import Role, User
 from app.utils.time import utcnow
 
 auth_bp = Blueprint("auth", __name__)
@@ -34,11 +34,25 @@ def _safe_next(target: str | None) -> str:
     return target
 
 
+def _panel_home(user) -> str:
+    """Resolve a user's normal post-login destination from their server-side role."""
+    panel_endpoints = {
+        Role.ADMIN.value: "admin.index",
+        Role.TEACHER.value: "teacher.index",
+        Role.STUDENT.value: "student.index",
+    }
+    return url_for(panel_endpoints.get(user.role, "dashboard.index"))
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("10 per minute; 60 per hour", methods=["POST"])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for("dashboard.index"))
+    # An authenticated browser visiting the login page should return to its panel,
+    # but a POST must still validate the submitted credentials. Otherwise a session
+    # left signed in as Admin can silently ignore valid Teacher credentials and keep
+    # redirecting to the Admin Panel.
+    if current_user.is_authenticated and request.method == "GET":
+        return redirect(_panel_home(current_user))
 
     if request.method == "GET":
         return render_template("login.html")
@@ -63,7 +77,8 @@ def login():
     user.last_login_at = utcnow()
     db.session.commit()
     flash(f"Welcome back, {user.username}.", "success")
-    return redirect(_safe_next(request.args.get("next") or request.form.get("next")))
+    target = request.args.get("next") or request.form.get("next")
+    return redirect(_safe_next(target) if target else _panel_home(user))
 
 
 @auth_bp.route("/logout", methods=["POST"])

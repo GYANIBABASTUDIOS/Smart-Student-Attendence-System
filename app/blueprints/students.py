@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
     flash,
     jsonify,
@@ -17,12 +18,24 @@ from flask_login import current_user, login_required
 from app.extensions import db, limiter
 from app.models import Student
 from app.services import student_service
+from app.services import teacher_student_service
 from app.services.student_service import StudentError
 from app.utils.images import ImageValidationError, decode_data_url
-from app.utils.security import admin_required
+from app.utils.security import active_teacher_profile, admin_required
 from app.utils.validators import clamp_page_size, validate_student_data
 
 students_bp = Blueprint("students", __name__)
+
+
+def _teacher_alias_redirect(endpoint: str, **values):
+    """Keep legacy paths from bypassing the scoped Teacher Panel workflows."""
+    if current_user.has_role("student"):
+        abort(403)
+    if not current_user.has_role("teacher"):
+        return None
+    if active_teacher_profile() is None:
+        abort(403)
+    return redirect(url_for(endpoint, **values), code=303 if request.method == "POST" else 302)
 
 
 def _photo_from_request() -> bytes | None:
@@ -39,13 +52,18 @@ def _photo_from_request() -> bytes | None:
 @students_bp.route("/students")
 @login_required
 def list_students():
+    search = (request.args.get("search") or "").strip()
+    alias = _teacher_alias_redirect(
+        "teacher.students", **({"search": search} if search else {})
+    )
+    if alias is not None:
+        return alias
     page = request.args.get("page", 1, type=int)
     per_page = clamp_page_size(
         request.args.get("per_page", type=int),
         current_app.config["STUDENTS_PER_PAGE"],
         current_app.config["MAX_PER_PAGE"],
     )
-    search = (request.args.get("search") or "").strip()
     department = request.args.get("department", "")
     year = request.args.get("year", "")
 
@@ -95,6 +113,10 @@ def list_students():
 @login_required
 @limiter.limit("20 per minute", methods=["POST"])
 def register():
+    alias = _teacher_alias_redirect("teacher.create_student")
+    if alias is not None:
+        flash("Use the Teacher Panel registration form to select one of your assigned classes.", "info")
+        return alias
     if request.method == "GET":
         return render_template("register_student_clean.html")
 
@@ -136,6 +158,18 @@ def register():
 @login_required
 @limiter.limit("30 per minute", methods=["POST"])
 def edit(student_id: int):
+    if current_user.has_role("student"):
+        abort(403)
+    if current_user.has_role("teacher"):
+        teacher = active_teacher_profile()
+        if teacher is None:
+            abort(403)
+        if teacher_student_service.get_scoped_student(teacher.id, student_id) is None:
+            abort(404)
+        return redirect(
+            url_for("teacher.edit_student", student_id=student_id),
+            code=303 if request.method == "POST" else 302,
+        )
     student = db.session.get(Student, student_id)
     if student is None:
         flash("Student not found", "error")
@@ -174,6 +208,14 @@ def edit(student_id: int):
 @limiter.limit("30 per minute")
 def delete(student_id: int):
     """Soft delete. Attendance history is preserved."""
+    if current_user.has_role("student"):
+        abort(403)
+    if current_user.has_role("teacher"):
+        teacher = active_teacher_profile()
+        if teacher is None:
+            abort(403)
+        if teacher_student_service.get_scoped_student(teacher.id, student_id) is None:
+            return jsonify({"success": False, "message": "Student not found"}), 404
     try:
         name = student_service.deactivate_student(student_id)
     except StudentError as exc:
